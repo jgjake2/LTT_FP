@@ -1,4 +1,4 @@
-# LTT_FP
+# LTT_FP++
 LinusTechTips Floatplane Club Enhancer
 
 ## ToDo
