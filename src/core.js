@@ -11,6 +11,7 @@ Promise._immediateFn = setAsap;
 function isArray(obj){return (obj.constructor === (new Array).constructor ? true : false);}
 
 jMod.CSS = `
+#lmgNav {z-index: 1001;}
 .jmod-na {z-index: 16400;}
 .jmod-na .modal-backdrop {z-index: 16400;}
 .jmod-na .modal {z-index: 16500;}
@@ -50,7 +51,6 @@ jMod.CSS = `
 	LFPP.addCachedElements([
 		'elUserNav', 'ipsLayout_header', 'ipsLayout_body', 'lmgNav',
 		'elFullSettings',
-		'LFPP_VideoWrapper_Outer', 'LFPP_VideoWrapper_Inner_Padding', 'LFPP_VideoWrapper_Inner_Container',
 		'LFPP_StickyVideoWrapper_Outer', 'LFPP_StickyVideoWrapper_Inner', 'LFPP_StickyVideoWrapper_Headline', 'LFPP_StickyVideoWrapper_Headline_Content', 'LFPP_StickyVideoWrapper_Padding'
 	]);
 	LFPP.addCachedElements({

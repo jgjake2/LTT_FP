@@ -6,9 +6,6 @@
  * Add CSS to jMod's CSS pool, which is added as soon as the DOM exists (or immediately if the DOM already exists)
  */
 jMod.CSS = `
-#lmgNav {
-	z-index: 1001;
-}
 #LFPP_StickyVideoWrapper_Outer {
 	position: fixed;
 	min-height: 50px;
