@@ -73,7 +73,18 @@ jMod.CSS = `
 }
 `.toString();
 	
-	var player = LFPP.player = {};
+	
+	var player = LFPP.player = {
+		settings: {}
+	};
+	
+	Object.defineProperties(LFPP.player.settings, {
+		'enable_video_size_settings': {get: function() {return (jMod.Settings.get('Video_Size').indexOf('enable_video_size_settings') > -1);},enumerable: true, configurable: false},
+		'enable_dynamic_width_video': {get: function() {return (jMod.Settings.get('Video_Size').indexOf('enable_dynamic_width_video') > -1);},enumerable: true, configurable: false},
+		'enable_dynamic_width_video_animations': {get: function() {return (jMod.Settings.get('Video_Size').indexOf('enable_dynamic_width_video_animations') > -1);},enumerable: true, configurable: false},
+		'enable_video_headline': {get: function() {return (jMod.Settings.get('Video_Size').indexOf('enable_video_headline') > -1);},enumerable: true, configurable: false},
+		'Min_Video_Player_Height': {get: function() {return jMod.Settings.get('Min_Video_Player_Height').trim();},enumerable: true, configurable: false}
+	});
 	
 	LFPP.getDefaultAvailableVideoHeight = function(){return (LFPP.getViewportHeight() - LFPP.getNavBottom());};
 	LFPP.getDefaultMaxAvailableVideoHeight = function(){return (LFPP.getViewportHeight() - LFPP.getNavHeight());};
@@ -86,7 +97,7 @@ jMod.CSS = `
 	function getMinPlayerSizeSetting(){
 		var r = function(){return parseInt(LFPP.getViewportHeight() / 4)};
 		if(_cache.getMinPlayerSizeSetting) return _cache.getMinPlayerSizeSetting;
-		var minHeight = jMod.Settings.get('Min_Video_Player_Height').trim();
+		var minHeight = LFPP.player.settings.Min_Video_Player_Height;
 		if(minHeight && minHeight.toLowerCase() !== 'default' && /^\s*(\d+(?:\.\d+)?px|\d+\/\d+)\s*$/i.test(minHeight)){
 			if(/^\s*\d+(?:\.\d+)?px\s*$/i.test(minHeight)){
 				r = function(){return parseInt(minHeight)};
@@ -275,7 +286,7 @@ jMod.CSS = `
 		if(prevPadding !== newPadding) LFPP.el.LFPP_StickyVideoWrapper_Padding.attr('prevpadding', newPadding);
 		
 		
-		if(jMod.Settings.get('Video_Size').indexOf('enable_dynamic_width_video_animations') > -1){
+		if(LFPP.player.settings.enable_dynamic_width_video_animations){
 			LFPP.setVideoPlayerSize(newHeight, LFPP.getNavBottom(), (prevHeight === newHeight ? -1 : newPadding));
 		} else {
 			LFPP.el.LFPP_StickyVideoWrapper_Outer.css({'height': newHeight + 'px', top: LFPP.getNavBottom() + 'px'});
@@ -334,7 +345,7 @@ jMod.CSS = `
 		
 		setTimeout(waitForDownloadWrapper, 50, 0);
 		
-		if(jMod.Settings.get('Video_Size').indexOf('enable_video_headline') === -1){
+		if(!LFPP.player.settings.enable_video_headline){
 			LFPP.el.LFPP_StickyVideoWrapper_Headline.css('display', 'none');
 		}
 		
@@ -394,11 +405,9 @@ jMod.CSS = `
 			
 			var videoSizeSettings = jMod.Settings.get('Video_Size').split(',');
 			//console.log('Settings "Video_Size": ', jMod.Settings.get('Video_Size'));
-			var enable_video_size_settings = (videoSizeSettings.indexOf('enable_video_size_settings') > -1);
-			var enable_dynamic_width_video = (videoSizeSettings.indexOf('enable_dynamic_width_video') > -1);
 			
-			if(enable_video_size_settings){
-				if(enable_dynamic_width_video){
+			if(LFPP.player.settings.enable_video_size_settings){
+				if(LFPP.player.settings.enable_dynamic_width_video){
 					var minPlayerFn = getMinPlayerSizeSetting();
 					if(minPlayerFn && typeof minPlayerFn() === "number"){
 						LFPP.getStickyVideoMinHeight = minPlayerFn;
