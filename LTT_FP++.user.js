@@ -3,6 +3,10 @@
 // @namespace        jgjake2
 // @description      LinusTechTips Floatplane Club Enhancer
 // @author           jgjake2
+// @downloadURL      https://github.com/jgjake2/LTT_FP/raw/master/LTT_FP%2B%2B.user.js
+// @updateURL        https://github.com/jgjake2/LTT_FP/raw/master/LTT_FP%2B%2B.user.js
+// @homepage         https://github.com/jgjake2/LTT_FP
+// @supportURL       https://github.com/jgjake2/LTT_FP/issues
 // @include          https://linustechtips.com/main/topic/*
 // @require          https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js
 // @require          https://code.jmod.info/velocity.min.js
