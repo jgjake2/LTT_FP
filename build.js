@@ -24,7 +24,7 @@ function replaceFileRef(replaceStr, fileName){
 	if(/\/\*$/.test(fileName)){
 		var _files = fs.readdirSync(fileName.slice(0, -1), 'utf8');
 		_files.forEach(function(_file){
-			file += (getFile(fileName.slice(0, -1) + _file) || '');
+			file += (file ? '\r\n' : '') + (getFile(fileName.slice(0, -1) + _file) || '');
 		});
 	} else {
 		file = getFile(fileName) || '';
