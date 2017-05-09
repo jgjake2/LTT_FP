@@ -1,0 +1,29 @@
+{
+  "name": "ltt_fp_build",
+  "version": "1.0.0",
+  "description": "LTT_FP++ build script",
+  "main": "build.js",
+  "dependencies": {
+    "js-beautify": "^1.6.12",
+    "uglify-js": "github:mishoo/UglifyJS2#harmony"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jgjake2/LTT_FP.git"
+  },
+  "keywords": [
+    "LinusTechTips",
+    "Floatplane"
+  ],
+  "author": "jgjake2",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/jgjake2/LTT_FP/issues"
+  },
+  "homepage": "https://github.com/jgjake2/LTT_FP#readme",
+  "private": true
+}
