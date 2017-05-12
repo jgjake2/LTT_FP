@@ -6,6 +6,10 @@
  * Add CSS to jMod's CSS pool, which is added as soon as the DOM exists (or immediately if the DOM already exists)
  */
 jMod.CSS = `
+#ipsLayout_body {
+	margin-top:10px;
+}
+
 #LFPP_StickyVideoWrapper_Outer {
 	position: fixed;
 	min-height: 50px;
@@ -38,17 +42,25 @@ jMod.CSS = `
 	height: -moz-fit-content;
 	height: -webkit-fit-content;
 	width: 100%;
-	background-color: #333;
+	background-color: white;
 	padding: 5px 20px;
+	margin: 0 auto;
+	border-bottom-right-radius: 6px;
+	border-bottom-left-radius: 6px;
+	box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 2px 0px;
 }
 
 #LFPP_StickyVideoWrapper_Headline_Content h1 {
 	font-family: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", "Roboto", sans-serif;
-	color: rgba(255,255,255,0.8);
+	color: rgb(49, 49, 49);
 }
 
 #LFPP_StickyVideoWrapper_Headline_Content td > p > a[target="_blank"] {
-	color: rgba(128,128,128,1);
+	color: rgba(128,128,128,0.8);
+}
+
+#LFPP_StickyVideoWrapper_Headline_Content td > p > a[target="_blank"]:hover {
+	color: rgba(0,0,0,1);
 }
 
 #LFPP_StickyVideoWrapper_Headline_Content .ipsButton_split {
@@ -63,7 +75,7 @@ jMod.CSS = `
 #LFPP_StickyVideoWrapper_Outer .video-container > iframe {
 
 }
-
+/*
 #LFPP_StickyVideoWrapper_Padding {
 	display: block;
 	width:100%;
@@ -71,12 +83,60 @@ jMod.CSS = `
 	position: relative;
 	top: 0;
 }
+*/
+/* Cover up white background when header hides */
+#ipsLayout_header::before {
+    display: block;
+    height: 250px;
+    width: 100%;
+    background-color: black;
+    position: absolute;
+    top: 0;
+    left: 0;
+    content: "";
+    z-index: 1000;
+}
+
+
+#LFPP_StickyVideoWrapper_Headline_Content {
+	opacity:1;
+	top:0px;
+	transition: opacity 0.2s ease-in-out, top 0.2 ease-in-out;
+}
+.LFPP_Player_Min #LFPP_StickyVideoWrapper_Headline_Content {
+	opacity: 0;
+	top: -100px;
+	transition: opacity 0.25s ease-in-out, top 0.25 ease-in-out;
+	z-index:-1;
+}
+
+
+/* fix for missing css when changing comment pages */
+#LFPP_StickyVideoWrapper_Outer .video-container{
+	position:relative;
+	/*padding-bottom:56.25%;*/
+	/*height:0;*/
+	overflow:hidden;
+}
+#LFPP_StickyVideoWrapper_Outer .video-container iframe,
+#LFPP_StickyVideoWrapper_Outer .video-container object,
+#LFPP_StickyVideoWrapper_Outer .video-container embed {
+	position:absolute;
+	top:0;
+	left:0;
+	width:100%;
+	height:100%;
+}
+
 `.toString();
 	
 	
 	var player = LFPP.player = {
 		settings: {}
 	};
+	var _viewportHeight = 0;
+	var _minPlayerSize = 200;
+	var usingVelocity = true;
 	
 	Object.defineProperties(LFPP.player.settings, {
 		'enable_video_size_settings': {get: function() {return (jMod.Settings.get('Video_Size').indexOf('enable_video_size_settings') > -1);},enumerable: true, configurable: false},
@@ -109,13 +169,11 @@ jMod.CSS = `
 		return r;
 	}
 	
-
 	LFPP.getStickyVideoCurrentHeight = function(){
 		var yOffset = LFPP.getPageYOffset();
 		var defHeight = LFPP.getDefaultAvailableVideoHeight();
-		var vh = LFPP.getViewportHeight();
-		var vBottom = vh + yOffset;
-		var wrapperMaxBottom = (vh + LFPP.getHeaderBlockHeight() + LFPP.getNavHeight());
+		var vBottom = _viewportHeight + yOffset;
+		var wrapperMaxBottom = (_viewportHeight + LFPP.getHeaderBlockHeight() + LFPP.getNavHeight());
 		
 		var distanceBelowVideoWrapper = vBottom - wrapperMaxBottom;
 		
@@ -123,51 +181,80 @@ jMod.CSS = `
 		if(distanceBelowVideoWrapper <= 0){
 			return defHeight;
 		} else {
-			return Math.max((vh - LFPP.getNavBottom()) - (distanceBelowVideoWrapper * 2), LFPP.getStickyVideoMinHeight());
+			return Math.max((_viewportHeight - LFPP.getNavBottom()) - (distanceBelowVideoWrapper * 2), _minPlayerSize);
 		}
 	};
 	
-	
-	var _tPlayerHeight = 0,
-		_tPlayerTop = 0,
-		_tPaddingHeight = 0,
-		_tCount = 0;
-	_cache.setVideoPlayerSize = null;
-	_cache.videoPlayerSizeCancel = null;
-	_cache.videoPlayerSizeDistance = null;
-	var usingVelocity = true;
-	
-
-	LFPP.setVideoPlayerSize = function(playerHeight, playerTop, paddingHeight){
-		//console.log('setVideoPlayerSize', playerHeight, playerTop, paddingHeight);
-		if(_cache.setVideoPlayerSize){
-			_tCount += (Math.abs(_tPlayerHeight - playerHeight));
-			if(_cache.videoPlayerSizeCancel && _tCount > 20){// && Math.abs(needsResize) > 15 && Math.abs(needsResize - _this.working.boxResizeDistance) > 10 )
-				_cache.videoPlayerSizeCancel();
+	player.onScroll = function(e){
+		if(LFPP.player.settings.enable_dynamic_width_video_animations){
+			if(usingVelocity){
+				LFPP.el.LFPP_StickyVideoWrapper_Padding_top.clearQueue().stop();
+				LFPP.el.LFPP_StickyVideoWrapper_Padding_top.velocity({'height': window.pageYOffset}, {
+					duration: 75,
+					easing: 'linear',
+					//complete: function(){}
+				});
 			} else {
-				return _cache.setVideoPlayerSize;
+				LFPP.el.LFPP_StickyVideoWrapper_Padding_top.velocity("stop", true);
+				LFPP.el.LFPP_StickyVideoWrapper_Padding_top.velocity({'height': window.pageYOffset}, {
+					duration: 75,
+					easing: 'linear',
+					//complete: function(){}
+				});
+			}
+		} else {
+			LFPP.el.LFPP_StickyVideoWrapper_Padding_top.css('height', window.pageYOffset + 'px');
+		}
+		
+		var newHeight = LFPP.getStickyVideoCurrentHeight();
+		if(LFPP.player.settings.enable_dynamic_width_video_animations){
+			player.setPlayerHeight(newHeight, LFPP.getNavBottom());
+		} else {
+			LFPP.el.LFPP_StickyVideoWrapper_Outer.css({'height': newHeight, top: LFPP.getNavBottom()});
+			LFPP.el.LFPP_StickyVideoWrapper_Padding_bottom.css('height', newHeight);
+		}
+		
+		var maxScroll = _viewportHeight - ((_minPlayerSize + LFPP.el.LFPP_StickyVideoWrapper_Headline_Content.height()) * 2) + 75;
+		player.setPlayerPaddingMaxHeight(maxScroll);
+		
+		if((maxScroll + parseInt(LFPP.el.LFPP_StickyVideoWrapper_Padding_bottom.css('height'))) <= (window.pageYOffset + _minPlayerSize)){
+			LFPP.el.LFPP_StickyVideoWrapper_Outer.addClass('LFPP_Player_Min');
+		} else {
+			
+			LFPP.el.LFPP_StickyVideoWrapper_Outer.removeClass('LFPP_Player_Min');
+		}
+	};
+	
+	player.onWindowResize = function(e, a){
+		_viewportHeight = LFPP.getViewportHeight();
+		_minPlayerSize = parseInt(_viewportHeight / 4);
+		player.onScroll();
+	};
+	
+	player.setPlayerPaddingMaxHeight = function(paddingMaxHeight){
+		if(LFPP.el.LFPP_StickyVideoWrapper_Padding_top.css('max-height') !== (paddingMaxHeight + 'px')){
+			LFPP.el.LFPP_StickyVideoWrapper_Padding_top.css('max-height', paddingMaxHeight);
+		}
+	};
+	
+	player.setPlayerHeight = function(newPlayerHeight, newPlayerTop){
+		if(_cache.setPlayerHeight){
+			if(_cache.setPlayerHeightCancel){
+				_cache.setPlayerHeightCancel();
+			} else {
+				return _cache.setPlayerHeight;
 			}
 		}
-		_tCount = 0;
 		
-		_cache.setVideoPlayerSize = new Promise(function(resolve, reject) {
+		_cache.setPlayerHeight = new Promise(function(resolve, reject) {
 		
 			var resolved = false,
 				canceled = false,
 				_resolve = function(){
 					if(!resolved && !canceled){
 						resolved = true;
-						_cache.setVideoPlayerSize = null;
-						_cache.videoPlayerSizeCancel = null;
-						_cache.videoPlayerSizeDistance = null;
-						
-						if(_tCount > 0){
-							setTimeout(function(){
-								if(!_cache.setVideoPlayerSize){
-									LFPP.refreshStickyVideoPosition();
-								}
-							}, 8);
-						}
+						_cache.setPlayerHeight = null;
+						_cache.setPlayerHeightCancel = null;
 						resolve(true);
 					}
 				},
@@ -177,45 +264,30 @@ jMod.CSS = `
 						//console.log('canceled');
 						if(usingVelocity){
 							LFPP.el.LFPP_StickyVideoWrapper_Outer.velocity("stop", true);
-							LFPP.el.LFPP_StickyVideoWrapper_Padding.velocity("stop", true);
+							LFPP.el.LFPP_StickyVideoWrapper_Padding_bottom.velocity("stop", true);
 						} else {
 							LFPP.el.LFPP_StickyVideoWrapper_Outer.clearQueue().stop();
-							LFPP.el.LFPP_StickyVideoWrapper_Padding.clearQueue().stop();
+							LFPP.el.LFPP_StickyVideoWrapper_Padding_bottom.clearQueue().stop();
 						}
 						resolved = true;
-						_cache.setVideoPlayerSize = null;
-						_cache.videoPlayerSizeCancel = null;
-						_cache.videoPlayerSizeDistance = null;
+						_cache.setPlayerHeight = null;
+						_cache.setPlayerHeightCancel = null;
 						resolve(false);
 					}
 				};
-				_cache.videoPlayerSizeCancel = _cancel;
-				
-				var paddingDirection = (paddingHeight == -1 ? 0 : ((_tPaddingHeight - paddingHeight) >= 0 ? -1 : 1));
-				_tPlayerHeight = playerHeight;
-				_tPlayerTop = playerTop;
-				_tPaddingHeight = paddingHeight > -1 ? paddingHeight : _tPaddingHeight;
+				_cache.setPlayerHeightCancel = _cancel;
 
 				setAsap(function(){
 					if(canceled) return;
-					var wrapperChanges = {};
-					var paddingChanges = {};
-					
-					wrapperChanges.height = playerHeight;
-					
-					if(parseInt(LFPP.el.LFPP_StickyVideoWrapper_Outer.css('top')) !== playerTop){
-						wrapperChanges.top = playerTop;
+					var wrapperChanges = {height: newPlayerHeight};
+					var paddingChanges = {height: newPlayerHeight};
+					if(typeof newPlayerTop === "number" && parseInt(LFPP.el.LFPP_StickyVideoWrapper_Outer.css('top')) !== newPlayerTop){
+						wrapperChanges.top = newPlayerTop;
 					}
-					
-					paddingChanges.height = paddingHeight;
-					
-					var wrapperHeightDistance = Math.abs(parseInt(LFPP.el.LFPP_StickyVideoWrapper_Outer.css('height')) - playerHeight);
-					
-					var speed = Math.min(Math.max(parseInt((180.0 / 80.0) * wrapperHeightDistance), 250), 100);
-					
-					_cache.videoPlayerSizeDistance = wrapperHeightDistance;
+					var speed = 100;
 					
 					if(usingVelocity){
+						
 						LFPP.el.LFPP_StickyVideoWrapper_Outer.velocity(
 							wrapperChanges,
 							{
@@ -225,77 +297,41 @@ jMod.CSS = `
 							}
 						);
 						
-						
-						if(paddingHeight > -1 && parseInt(LFPP.el.LFPP_StickyVideoWrapper_Padding.css('height')) !== paddingHeight){
-							LFPP.el.LFPP_StickyVideoWrapper_Padding.velocity(
-								paddingChanges,
-								{
-									duration: speed,
-									easing: 'linear',
-									complete: _resolve
-								}
-							);
-						}
-						
-						
-					} else {
-					
-					
-						LFPP.el.LFPP_StickyVideoWrapper_Outer.animate(wrapperChanges,
+						LFPP.el.LFPP_StickyVideoWrapper_Padding_bottom.velocity(
+							paddingChanges,
 							{
 								duration: speed,
-								//easing: 'swing',
 								easing: 'linear',
-								//complete: _resolve,
-								//fail: _resolve,
+								complete: _resolve
+							}
+						);
+						
+					} else {
+						
+						LFPP.el.LFPP_StickyVideoWrapper_Outer.animate(
+							wrapperChanges,
+							{
+								duration: speed,
+								easing: 'linear',
 								always: _resolve
 							}
 						);
 						
-						if(paddingHeight > -1 && parseInt(LFPP.el.LFPP_StickyVideoWrapper_Padding.css('height')) !== paddingHeight){
-							LFPP.el.LFPP_StickyVideoWrapper_Padding.animate(paddingChanges,
-								{
-									duration: speed,
-									//easing: 'swing',
-									easing: 'linear',
-									//complete: _resolve,
-									//fail: _resolve,
-									always: _resolve
-								}
-							);
-						}
-						
-						
+						LFPP.el.LFPP_StickyVideoWrapper_Padding_bottom.animate(
+							paddingChanges,
+							{
+								duration: speed,
+								easing: 'linear',
+								always: _resolve
+							}
+						);
 					}
 				
 				});
 		});
 		
-		return _cache.setVideoPlayerSize;
+		return _cache.setPlayerHeight;
 	};
-	
-	LFPP.refreshStickyVideoPosition = function(force){
-		var newHeight = LFPP.getStickyVideoCurrentHeight();
-		//var minHeight = LFPP.getStickyVideoMinHeight();
-		
-		var prevHeight = parseInt(LFPP.el.LFPP_StickyVideoWrapper_Padding.attr('prevheight') || 0);
-		var prevPadding = parseInt(LFPP.el.LFPP_StickyVideoWrapper_Padding.attr('prevpadding') || 0);
-		var newPadding = (newHeight + LFPP.getPageYOffset() + LFPP.el.LFPP_StickyVideoWrapper_Headline_Content.height() - LFPP.getHeaderBlockHeight());
-		
-		if(prevHeight !== newHeight) LFPP.el.LFPP_StickyVideoWrapper_Padding.attr('prevheight', newHeight);
-		if(prevPadding !== newPadding) LFPP.el.LFPP_StickyVideoWrapper_Padding.attr('prevpadding', newPadding);
-		
-		
-		if(LFPP.player.settings.enable_dynamic_width_video_animations){
-			LFPP.setVideoPlayerSize(newHeight, LFPP.getNavBottom(), (prevHeight === newHeight ? -1 : newPadding));
-		} else {
-			LFPP.el.LFPP_StickyVideoWrapper_Outer.css({'height': newHeight + 'px', top: LFPP.getNavBottom() + 'px'});
-			if(prevHeight !== newHeight){
-				LFPP.el.LFPP_StickyVideoWrapper_Padding.css('height', newPadding + 'px');
-			}
-		}
-	};
-	
 	
 	var videoPlayerWrapperAdded = false;
 	function addVideoPlayerWrapper(){
@@ -306,10 +342,13 @@ jMod.CSS = `
 			+ '<div id="LFPP_StickyVideoWrapper_Outer" style="height:200px;">'
 				+ '<div id="LFPP_StickyVideoWrapper_Inner"></div>'
 				+ '<div id="LFPP_StickyVideoWrapper_Headline">'
-					+ '<div id="LFPP_StickyVideoWrapper_Headline_Content"></div>'
+					+ '<div id="LFPP_StickyVideoWrapper_Headline_Content" style="max-width:' + LFPP.contentMaxWidth + 'px;width:' + LFPP.breadcrumbWidth + 'px;"></div>'
 				+ '</div>'
 			+ '</div>'
-			+ '<div id="LFPP_StickyVideoWrapper_Padding" style="height:' + (LFPP.getViewportHeight() - LFPP.getHeaderBlockHeight() - LFPP.getNavHeight()) + 'px;"></div>'
+			+ '<div id="LFPP_StickyVideoWrapper_Padding" style="">'
+				+ '<div id="LFPP_StickyVideoWrapper_Padding_top" style=""></div>'
+				+ '<div id="LFPP_StickyVideoWrapper_Padding_bottom" style=""></div>'
+			+ '</div>'
 		);
 		
 		var $videoContainer = LFPP.el.videoContainer.detach();
@@ -353,7 +392,7 @@ jMod.CSS = `
 			var _break = false;
 			mutations.forEach(function(mutation) {
 				if(!_break && mutation.attributeName === 'class') {
-					setAsap(LFPP.refreshStickyVideoPosition);
+					setAsap(player.onScroll);
 					_break = true;
 				}
 			});    
@@ -362,43 +401,17 @@ jMod.CSS = `
 		var navObConfig = {attributes: true, childList: false, characterData: false, subtree: false};
 
 		navObserver.observe(LFPP.el.lmgNav[0], navObConfig);
-		/*
-		var playerObserver = new MutationObserver(function(mutations) {
-			var _break = false;
-			mutations.forEach(function(mutation) {
-				console.log('mutation', mutation);
-				if(!_break && mutation.attributeName === 'style') {
-					//setAsap(LFPP.refreshStickyVideoPosition);
-					LFPP.refreshPaddingHeight();
-					_break = true;
-				}
-			});    
-		});
-
-		var playerObConfig = {attributes: true, childList: false, characterData: false, subtree: false};
-
-		playerObserver.observe(LFPP.el.LFPP_StickyVideoWrapper_Outer[0], playerObConfig);
-		*/
 		
-		function _onPageScroll(e){
-			//console.log('scroll', e);
-			setAsap(LFPP.refreshStickyVideoPosition);
-		};
+		window.onscroll = player.onScroll;
 		
-		
-		//$(window).scroll(function(e) {
-			//console.log('$scroll', e);
-		//});
-		
-		window.onscroll = _onPageScroll;
-		
-		LFPP.refreshStickyVideoPosition();
-		setTimeout(LFPP.refreshStickyVideoPosition, 100);
-		$(window).on('resize orientationChange', LFPP.refreshStickyVideoPosition);
+		setAsap(player.onScroll);
+		$(window).on('resize orientationChange', player.onWindowResize);
 	}
 	
 	jMod.onDOMReady = function(){
 		LFPP.log('VideoPlayer::onDOMReadyCB');
+		_viewportHeight = LFPP.getViewportHeight();
+		_minPlayerSize = parseInt(_viewportHeight / 4);
 		
 		if(LFPP.isFPClubVideoPage){
 			LFPP.log('Is Video Page');

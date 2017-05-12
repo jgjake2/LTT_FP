@@ -49,9 +49,10 @@ jMod.CSS = `
 	};
 	
 	LFPP.addCachedElements([
-		'elUserNav', 'ipsLayout_header', 'ipsLayout_body', 'lmgNav',
+		'elUserNav', 'ipsLayout_header', 'ipsLayout_body', 'ipsLayout_contentArea', 'ipsLayout_mainArea', 'lmgNav',
 		'elFullSettings',
-		'LFPP_StickyVideoWrapper_Outer', 'LFPP_StickyVideoWrapper_Inner', 'LFPP_StickyVideoWrapper_Headline', 'LFPP_StickyVideoWrapper_Headline_Content', 'LFPP_StickyVideoWrapper_Padding'
+		'LFPP_StickyVideoWrapper_Outer', 'LFPP_StickyVideoWrapper_Inner', 'LFPP_StickyVideoWrapper_Headline', 'LFPP_StickyVideoWrapper_Headline_Content',
+		'LFPP_StickyVideoWrapper_Padding', 'LFPP_StickyVideoWrapper_Padding_top', 'LFPP_StickyVideoWrapper_Padding_bottom'
 	]);
 	LFPP.addCachedElements({
 		'headerBlock': '#ipsLayout_header .ipsResponsive_showDesktop.ipsResponsive_block',
@@ -86,6 +87,19 @@ jMod.CSS = `
 			set: function(val) {_cache._isFPClubVideoPage = (val === true);},
 			enumerable: true, configurable: false
 		},
+		'contentMaxWidth': {
+			get: function() {return parseInt(LFPP.el.ipsLayout_body.css('max-width') || -1);},
+			enumerable: true, configurable: false
+		},
+		'contentAreaWidth': {
+			get: function() {return parseInt(LFPP.el.ipsLayout_mainArea.css('width'));},
+			enumerable: true, configurable: false
+		},
+		'breadcrumbWidth': {
+			get: function() {return parseInt(LFPP.el.breadcrumbs.width());},
+			enumerable: true, configurable: false
+		},
+		
 	});
 	
 	LFPP.getNavHeight = function(){return Math.max(45, (LFPP.el.lmgNav && LFPP.el.lmgNav.length ? parseInt(LFPP.el.lmgNav.height()) : -1));};
