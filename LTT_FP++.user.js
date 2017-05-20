@@ -11,7 +11,7 @@
 // @require          https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js
 // @require          https://code.jmod.info/velocity.min.js
 // @require          https://code.jmod.info/0.0.20/jMod.min.js
-// @version          0.3
+// @version          0.3.1
 // @grant            unsafeWindow
 // @grant            GM_info
 // @grant            GM_log
@@ -297,18 +297,7 @@ jMod.CSS = `
 	top: 0;
 }
 */
-/* Cover up white background when header hides */
-#ipsLayout_header::before {
-    display: block;
-    height: 250px;
-    width: 100%;
-    background-color: black;
-    position: absolute;
-    top: 0;
-    left: 0;
-    content: "";
-    z-index: 1000;
-}
+
 
 
 #LFPP_StickyVideoWrapper_Headline_Content {
@@ -628,6 +617,21 @@ jMod.CSS = `
 		
 		if(LFPP.isFPClubVideoPage){
 			LFPP.log('Is Video Page');
+
+			jMod.CSS = `			
+/* Cover up white background when header hides */
+#ipsLayout_header::before {
+    display: block;
+    height: 250px;
+    width: 100%;
+    background-color: black;
+    position: absolute;
+    top: 0;
+    left: 0;
+    content: "";
+    z-index: 1000;
+}
+`.toString();
 			
 			var videoSizeSettings = jMod.Settings.get('Video_Size').split(',');
 			//console.log('Settings "Video_Size": ', jMod.Settings.get('Video_Size'));

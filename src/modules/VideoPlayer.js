@@ -84,18 +84,7 @@ jMod.CSS = `
 	top: 0;
 }
 */
-/* Cover up white background when header hides */
-#ipsLayout_header::before {
-    display: block;
-    height: 250px;
-    width: 100%;
-    background-color: black;
-    position: absolute;
-    top: 0;
-    left: 0;
-    content: "";
-    z-index: 1000;
-}
+
 
 
 #LFPP_StickyVideoWrapper_Headline_Content {
@@ -415,6 +404,21 @@ jMod.CSS = `
 		
 		if(LFPP.isFPClubVideoPage){
 			LFPP.log('Is Video Page');
+
+			jMod.CSS = `			
+/* Cover up white background when header hides */
+#ipsLayout_header::before {
+    display: block;
+    height: 250px;
+    width: 100%;
+    background-color: black;
+    position: absolute;
+    top: 0;
+    left: 0;
+    content: "";
+    z-index: 1000;
+}
+`.toString();
 			
 			var videoSizeSettings = jMod.Settings.get('Video_Size').split(',');
 			//console.log('Settings "Video_Size": ', jMod.Settings.get('Video_Size'));
