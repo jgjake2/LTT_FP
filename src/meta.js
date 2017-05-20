@@ -13,7 +13,7 @@
 // @require          https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js
 // @require          https://code.jmod.info/velocity.min.js
 // @require          https://code.jmod.info/0.0.20/jMod.min.js
-// @version          0.3.1
+// @version          0.3.2
 // @grant            unsafeWindow
 // @grant            GM_info
 // @grant            GM_log
