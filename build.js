@@ -1,12 +1,80 @@
 var beautify = require('js-beautify').js_beautify
 var fs = require('fs');
+var path = require('path');
 var UglifyJS = require('uglify-js');
 //var validate = require("validate.js");
 
+var copyOutput = [];
+var copyMinOutput = [];
 var minifyOutput = false;
+
+
+process.argv.forEach(function (val, index, array) {
+	if(/\-\-min/i.test(val)){
+		minifyOutput = true;
+	}
+	
+	if(/\-\-copy/i.test(val)){
+		if(array.length > (index + 1)){// && /^\s*(?:\'(?:[^']|\\')+\'|\"(?:[^"]|\\")+\")\s*$/i.test(array[index + 1]))
+			copyOutput.push(array[index + 1].trim().replace(/['"]/gm, '').replace(/\\/gm, '\\\\'));
+		} else {
+			console.log('Invalid path for --copy', process.argv);
+		}
+	}
+	
+	if(/\-\-mcopy/i.test(val)){
+		if(array.length > (index + 1)){// && /^\s*(?:\'(?:[^']|\\')+\'|\"(?:[^"]|\\")+\")\s*$/i.test(array[index + 1]))
+			copyMinOutput.push(array[index + 1].trim().replace(/['"]/gm, '').replace(/\\/gm, '\\\\'));
+		} else {
+			console.log('Invalid path for --mcopy', process.argv);
+		}
+	}
+	
+	if(/\-\-help/i.test(val)){
+		console.log(`Build Script for LTT_FP++
+
+Usage: node build.js [options]
+
+Options:
+    --copy <file>       Copy build to specified file path. This argument may be used multiple times
+    --mcopy <file>      Copy minified build to specified file path. This argument may be used multiple times
+    --min               Minify build output
+    --help              Show this help message`.toString());
+		process.exit(0);
+	}
+});
 
 function getFile(fileName){
 	return fs.readFileSync(fileName, 'utf8');
+}
+
+function writeToFile(fileName, data){
+	//var fileDirName = path.dirname(fileName).replace(/[\\]+$/, '');
+	//if(fileDirName){
+		//try {
+			//if(fs.accessSync(fileDirName, fs.constants.R_OK)){
+				try {
+					fs.writeFileSync(fileName, data, 'utf8');
+				} catch(e) {
+					console.log(e);
+				}
+			//} else {
+				//console.log('Error, you do not have permission to access directory:', fileDirName, fileName);
+			//}
+		//} catch(x){
+			//console.log('Error, directory does not exist:', fileDirName, fileName);
+			//console.log(x);
+		//}
+	//}
+}
+
+function writeToAllFiles(arr, data){
+	for(var i = 0; i < arr.length; i++){
+		if(arr[i]) {
+			console.log('\t-> "' + arr[i] + '"');
+			writeToFile(arr[i], data);
+		}
+	}
 }
 
 var fileRefPatt = /(\[\[[\'\"]([^\'\"]+)[\'\"]\]\][\r\n]*)/gmi;
@@ -49,8 +117,15 @@ while(match = fileRefPatt.exec(origFile)){
 
 processedFile = getFile('./src/meta.js') + '\r\n' + processedFile;
 
+var mainCodePath = './LTT_FP++.user.js';
 var tmpCodePath = './tmp/LTT_FP++.user.js';
 var minCodePath = './tmp/LTT_FP++.min.user.js';
+try {
+	if(fs.accessSync('./tmp', fs.constants.R_OK | fs.constants.W_OK)){} // test if directory tmp exists
+} catch(e) {
+	console.log('Creating tmp dir');
+	fs.mkdirSync('./tmp');
+}
 
 fs.writeFileSync(tmpCodePath, processedFile, 'utf8');
 	
@@ -105,5 +180,21 @@ var opts = {
 };
 var minCode = UglifyJS.minify(processedFile, opts);
 console.log(minCode.warnings);
+var fullMinCode = getFile('./src/meta.js') + '\r\n' + minCode.code;
 
-fs.writeFileSync(minCodePath, getFile('./src/meta.js') + '\r\n' + minCode.code, 'utf8');
+fs.writeFileSync(minCodePath, fullMinCode, 'utf8');
+if(minifyOutput){
+	fs.writeFileSync(mainCodePath, fullMinCode, 'utf8');
+} else {
+	fs.writeFileSync(mainCodePath, processedFile, 'utf8');
+}
+
+if(copyOutput.length){
+	console.log('\r\nOutput code to files:');
+	writeToAllFiles(copyOutput, processedFile);
+}
+
+if(copyMinOutput.length){
+	console.log('\r\nOutput min code to files:');
+	writeToAllFiles(copyMinOutput, fullMinCode);
+}
