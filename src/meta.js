@@ -8,6 +8,8 @@
 // @homepage         https://github.com/jgjake2/LTT_FP
 // @supportURL       https://github.com/jgjake2/LTT_FP/issues
 // @include          https://linustechtips.com/main/topic/*
+// @include          https://linustechtips.com/main/forum/91-the-floatplane-club
+// @include          https://linustechtips.com/main/forum/91-the-floatplane-club/*
 // @require          https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js
 // @require          https://code.jmod.info/velocity.min.js
 // @require          https://code.jmod.info/0.0.20/jMod.min.js

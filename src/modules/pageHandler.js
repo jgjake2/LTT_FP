@@ -39,13 +39,11 @@
 						console.log('invalid callback id: ', c);
 					}
 				},
-				fire: function(a, b, c, d){
-					//var _this = this;
+				fire: function(){
 					var r = null;
 					for(var key in this.cb){
 						if(typeof this.cb[key] === "function"){
 							try {
-								//r = this.cb[key](a, b, c, d);
 								r = this.cb[key].apply(this, arguments);
 								if(r === false){
 									this.remove(key);
@@ -354,6 +352,8 @@
 		};
 		*/
 		
+		
+		/*
 		page.onHistoryEdit = function(e, urlChanged, hashChanged){
 			console.log('LFPP.page.onHistoryEdit fired: ', e, urlChanged, hashChanged);
 		};
@@ -365,6 +365,7 @@
 		page.onPageIndexChange = function(e){
 			console.log('LFPP.page.onPageIndexChange fired: ', e);
 		};
+		*/
 		
 		
 		console.log('pageHandler::onPageReady done');
