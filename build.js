@@ -179,7 +179,9 @@ var opts = {
 	}
 };
 var minCode = UglifyJS.minify(processedFile, opts);
-console.log(minCode.warnings);
+if(minCode.error) console.log(minCode.error);
+//if(minCode.warnings) console.log(minCode.warnings);
+
 var fullMinCode = getFile('./src/meta.js') + '\r\n' + minCode.code;
 
 fs.writeFileSync(minCodePath, fullMinCode, 'utf8');

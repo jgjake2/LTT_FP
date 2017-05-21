@@ -70,7 +70,7 @@
 		}
 	}
 	
-	addEventHandlers(['historyEdit', 'hashChange', 'pageIndexChange']);
+	addEventHandlers(['historyEdit', 'hashChange', 'pageIndexChange', 'headerStateChange']);
 	
 	Object.defineProperties(LFPP.page, {
 		/*
@@ -215,6 +215,19 @@
 			set: function(val) {
 				if(typeof val === "function"){
 					handleEvent('pageIndexChange', val);
+				}
+			},
+			enumerable: true,
+			configurable: false
+		},
+		
+		'onHeaderStateChange': {
+			get: function() {
+				return page.events.headerStateChange;
+			},
+			set: function(val) {
+				if(typeof val === "function"){
+					handleEvent('headerStateChange', val);
 				}
 			},
 			enumerable: true,

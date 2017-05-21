@@ -13,7 +13,7 @@
 // @require          https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js
 // @require          https://code.jmod.info/velocity.min.js
 // @require          https://code.jmod.info/0.0.20/jMod.min.js
-// @version          0.3.2
+// @version          0.3.3
 // @grant            unsafeWindow
 // @grant            GM_info
 // @grant            GM_log
@@ -30,7 +30,7 @@
 // @unwrap
 // @noframes
 // @run-at           document-start
-// @jMod             {"debug": false, "API": {"log": {"debug": true}}}
+// @jMod             {"debug": false, "API": {"log": {"debug": true}}, "script": {"script_name": "LTT_FP++", "username": "jgjake2"}}
 // ==/UserScript==
 
 (function($){
@@ -89,7 +89,7 @@ jMod.CSS = `
 		'elUserNav', 'ipsLayout_header', 'ipsLayout_body', 'ipsLayout_contentArea', 'ipsLayout_mainArea', 'lmgNav',
 		'elFullSettings',
 		'LFPP_StickyVideoWrapper_Outer', 'LFPP_StickyVideoWrapper_Inner', 'LFPP_StickyVideoWrapper_Headline', 'LFPP_StickyVideoWrapper_Headline_Content',
-		'LFPP_StickyVideoWrapper_Padding', 'LFPP_StickyVideoWrapper_Padding_top', 'LFPP_StickyVideoWrapper_Padding_bottom'
+		'LFPP_StickyVideoWrapper_Padding', 'LFPP_StickyVideoWrapper_Padding_header', 'LFPP_StickyVideoWrapper_Padding_headline', 'LFPP_StickyVideoWrapper_Padding_top', 'LFPP_StickyVideoWrapper_Padding_bottom'
 	]);
 	LFPP.addCachedElements({
 		'headerBlock': '#ipsLayout_header .ipsResponsive_showDesktop.ipsResponsive_block',
@@ -217,6 +217,144 @@ jMod.CSS = `
 (function(){
 	/* Page state and events handler */
 	
+	var header = LFPP.header = {
+		events: {}
+	};
+	
+	var _hcache = header._cache = {};
+	
+	Object.defineProperties(LFPP.header, {
+		/*
+		'foo': {
+			get: function() {},
+			set: function(val) {},
+			enumerable: true,
+			configurable: false
+		},
+		*/
+		
+		'topBannerActualHeight': {
+			get: function() {
+				if(!_hcache.topBannerActualHeight){
+					_hcache.topBannerActualHeight = LFPP.el.headerBlock.height() || 75;
+				}
+				return _hcache.topBannerActualHeight;
+			},
+			enumerable: true,
+			configurable: false
+		},
+		'navActualHeight': {
+			get: function() {
+				if(!_hcache.navActualHeight){
+					_hcache.navActualHeight = LFPP.el.lmgNav.height() || 45;
+				}
+				return _hcache.navActualHeight;
+			},
+			enumerable: true,
+			configurable: false
+		},
+		'headerTotalActualHeight': {
+			get: function() {
+				if(!_hcache.headerTotalActualHeight || !_hcache.topBannerActualHeight || !_hcache.navActualHeight){
+					_hcache.headerTotalActualHeight = (header.topBannerActualHeight + header.navActualHeight) || 120;
+				}
+				return _hcache.headerTotalActualHeight;
+			},
+			enumerable: true,
+			configurable: false
+		},
+		
+		'headerWindowOffsetHeight': {
+			get: function() {
+				if(header.isNavPinned){
+					if(header.isNavScrolled){
+						return header.navActualHeight;
+					} else {
+						return Math.max(header.headerTotalActualHeight - LFPP.getPageYOffset(), header.navActualHeight);
+					}
+				}
+				
+				return Math.max(header.headerTotalActualHeight - LFPP.getPageYOffset(), 0);
+			},
+			enumerable: true,
+			configurable: false
+		},
+		
+		
+		'isNavPinned': {
+			get: function() {return LFPP.el.lmgNav.hasClass('pinned');},
+			enumerable: true,
+			configurable: false
+		},
+		'isNavScrolled': {
+			get: function() {return (header.isNavPinned && LFPP.el.lmgNav.hasClass('scrolled'));},
+			enumerable: true,
+			configurable: false
+		},
+		'isTopBannerVisible': {
+			get: function() {
+				if(header.isNavScrolled || (!header.isNavPinned && (LFPP.getPageYOffset() >= header.topBannerActualHeight))) return false;
+				return true;
+				
+			},
+			enumerable: true,
+			configurable: false
+		},
+		
+		
+		'onHeaderStateChange': {
+			get: function() {
+				return LFPP.page.events.headerStateChange;
+			},
+			set: function(val) {
+				LFPP.page.onHeaderStateChange = val;
+			},
+			enumerable: true,
+			configurable: false
+		}
+	});
+
+	//LFPP.page.onHeaderStateChange
+	
+	var _lastHeaderWindowOffsetHeight = 0;
+	function addObservers(){
+		_lastHeaderWindowOffsetHeight = header.headerWindowOffsetHeight;
+		// Observe #lmgNav for class changes to indicate a possible height change
+		var navObserver = new MutationObserver(function(mutations) {
+			for(var i = 0; i < mutations.length; i++){
+				if(mutations[i].attributeName === 'class') {
+					var o = {oldClass: mutations[i].oldValue, newClass: LFPP.el.lmgNav[0].className, oldOffset: _lastHeaderWindowOffsetHeight};
+					o.newOffset = _lastHeaderWindowOffsetHeight = header.headerWindowOffsetHeight;
+					
+					header.onHeaderStateChange.fire(o);
+					break;
+				}
+			}
+		});
+
+		var navObConfig = {attributes: true, attributeOldValue: true, childList: false, characterData: false, subtree: false};
+
+		navObserver.observe(LFPP.el.lmgNav[0], navObConfig);
+	}
+	
+	jMod.onDOMReady = function(){
+		LFPP.log('Header::onPageReady');
+		addObservers();
+		
+		/*
+		header.onHeaderStateChange = function(data){
+			LFPP.log('Header::onHeaderStateChange fired', data);
+		};
+		*/
+	};
+	
+})();
+
+
+
+(function(){
+	/* Page state and events handler */
+	
 	var page = LFPP.page = {
 		events: {}
 	};
@@ -285,7 +423,7 @@ jMod.CSS = `
 		}
 	}
 	
-	addEventHandlers(['historyEdit', 'hashChange', 'pageIndexChange']);
+	addEventHandlers(['historyEdit', 'hashChange', 'pageIndexChange', 'headerStateChange']);
 	
 	Object.defineProperties(LFPP.page, {
 		/*
@@ -430,6 +568,19 @@ jMod.CSS = `
 			set: function(val) {
 				if(typeof val === "function"){
 					handleEvent('pageIndexChange', val);
+				}
+			},
+			enumerable: true,
+			configurable: false
+		},
+		
+		'onHeaderStateChange': {
+			get: function() {
+				return page.events.headerStateChange;
+			},
+			set: function(val) {
+				if(typeof val === "function"){
+					handleEvent('headerStateChange', val);
 				}
 			},
 			enumerable: true,
@@ -908,7 +1059,7 @@ jMod.CSS = `
  */
 jMod.CSS = `
 #ipsLayout_body {
-	margin-top:10px;
+	margin-top:0px;
 }
 
 #LFPP_StickyVideoWrapper_Outer {
@@ -988,15 +1139,39 @@ jMod.CSS = `
 
 
 
+#LFPP_StickyVideoWrapper_Headline_Content, .LFPP_Player_Min #LFPP_StickyVideoWrapper_Headline_Content {
+    -webkit-backface-visibility: hidden;
+	-moz-backface-visibility: hidden;
+    backface-visibility: hidden;
+	
+	/*
+	-webkit-transition: opacity 0.25s ease-in-out, top 0.25 ease-in-out;
+	-moz-transition: opacity 0.25s ease-in-out, top 0.25 ease-in-out;
+	transition: opacity 0.25s ease-in-out, top 0.25 ease-in-out;
+	*/
+	-webkit-transition: opacity 0.25s ease-in-out;
+	-moz-transition: opacity 0.25s ease-in-out;
+	transition: opacity 0.25s ease-in-out;
+}
+
 #LFPP_StickyVideoWrapper_Headline_Content {
+    -webkit-backface-visibility: hidden;
+	-moz-backface-visibility: hidden;
+    backface-visibility: hidden;
+	
+	visibility: visible;
 	opacity:1;
-	top:0px;
-	transition: opacity 0.2s ease-in-out, top 0.2 ease-in-out;
+	
+	/*top:0px;*/
 }
 .LFPP_Player_Min #LFPP_StickyVideoWrapper_Headline_Content {
+    -webkit-backface-visibility: hidden;
+	-moz-backface-visibility: hidden;
+    backface-visibility: hidden;
+	
+	visibility: hidden;
 	opacity: 0;
-	top: -100px;
-	transition: opacity 0.25s ease-in-out, top 0.25 ease-in-out;
+	/*top: -100px;*/
 	z-index:-1;
 }
 
@@ -1027,21 +1202,25 @@ jMod.CSS = `
 	var _viewportHeight = 0;
 	var _minPlayerSize = 200;
 	var usingVelocity = true;
+	var scalar = 1;
+	function scale(num){return parseInt(num * scalar);}
+	
+	function getJModSetting(name, def){var tmp = jMod.Settings.get(name);return (typeof tmp === "undefined" ? def : tmp);}
 	
 	Object.defineProperties(LFPP.player.settings, {
-		'enable_video_size_settings': {get: function() {return (jMod.Settings.get('Video_Size').indexOf('enable_video_size_settings') > -1);},enumerable: true, configurable: false},
-		'enable_dynamic_width_video': {get: function() {return (jMod.Settings.get('Video_Size').indexOf('enable_dynamic_width_video') > -1);},enumerable: true, configurable: false},
-		'enable_dynamic_width_video_animations': {get: function() {return (jMod.Settings.get('Video_Size').indexOf('enable_dynamic_width_video_animations') > -1);},enumerable: true, configurable: false},
-		'enable_video_headline': {get: function() {return (jMod.Settings.get('Video_Size').indexOf('enable_video_headline') > -1);},enumerable: true, configurable: false},
-		'Min_Video_Player_Height': {get: function() {return jMod.Settings.get('Min_Video_Player_Height').trim();},enumerable: true, configurable: false}
+		'enable_video_size_settings': {get: function() {return (getJModSetting('Video_Size', LFPP.getSettingDefault('Video_Size')).indexOf('enable_video_size_settings') > -1);},enumerable: true, configurable: false},
+		'enable_dynamic_width_video': {get: function() {return (getJModSetting('Video_Size', LFPP.getSettingDefault('Video_Size')).indexOf('enable_dynamic_width_video') > -1);},enumerable: true, configurable: false},
+		'enable_dynamic_width_video_animations': {get: function() {return (getJModSetting('Video_Size', LFPP.getSettingDefault('Video_Size')).indexOf('enable_dynamic_width_video_animations') > -1);},enumerable: true, configurable: false},
+		'enable_video_headline': {get: function() {return (getJModSetting('Video_Size', LFPP.getSettingDefault('Video_Size')).indexOf('enable_video_headline') > -1);},enumerable: true, configurable: false},
+		'Min_Video_Player_Height': {get: function() {return getJModSetting('Min_Video_Player_Height', LFPP.getSettingDefault('Min_Video_Player_Height')).trim();},enumerable: true, configurable: false}
 	});
 	
 	LFPP.getDefaultAvailableVideoHeight = function(){return (LFPP.getViewportHeight() - LFPP.getNavBottom());};
-	LFPP.getDefaultMaxAvailableVideoHeight = function(){return (LFPP.getViewportHeight() - LFPP.getNavHeight());};
+	//LFPP.getDefaultMaxAvailableVideoHeight = function(){return (LFPP.getViewportHeight() - LFPP.getNavHeight());};
 	LFPP.getStickyVideoMinHeight = function(){return parseInt(LFPP.getViewportHeight() / 4);};
 	//LFPP.getDistanceTopToVideoWrapperBottom = function(){return (LFPP.el.LFPP_VideoWrapper_Outer.offset().top + LFPP.el.LFPP_VideoWrapper_Outer.height());};
-	LFPP.getDistanceTopToVideoWrapperBottom = function(){return (LFPP.getDefaultAvailableVideoHeight() + LFPP.el.LFPP_StickyVideoWrapper_Outer.height());};
-	LFPP.getDistanceNavBottomToVideoWrapperBottom = function(){return (LFPP.getDistanceTopToVideoWrapperBottom() - LFPP.getNavBottom());};
+	//LFPP.getDistanceTopToVideoWrapperBottom = function(){return (LFPP.getDefaultAvailableVideoHeight() + LFPP.el.LFPP_StickyVideoWrapper_Outer.height());};
+	//LFPP.getDistanceNavBottomToVideoWrapperBottom = function(){return (LFPP.getDistanceTopToVideoWrapperBottom() - LFPP.getNavBottom());};
 
 
 	function getMinPlayerSizeSetting(){
@@ -1060,22 +1239,36 @@ jMod.CSS = `
 	}
 	
 	LFPP.getStickyVideoCurrentHeight = function(){
+		var pinned = LFPP.header.isNavPinned;
 		var yOffset = LFPP.getPageYOffset();
-		var defHeight = LFPP.getDefaultAvailableVideoHeight();
-		var vBottom = _viewportHeight + yOffset;
-		var wrapperMaxBottom = (_viewportHeight + LFPP.getHeaderBlockHeight() + LFPP.getNavHeight());
-		
-		var distanceBelowVideoWrapper = vBottom - wrapperMaxBottom;
+		var distanceBelowVideoWrapper;
+		if(pinned){
+			distanceBelowVideoWrapper = yOffset - (LFPP.getHeaderBlockHeight() + LFPP.getNavHeight());
+		} else {
+			distanceBelowVideoWrapper = yOffset;
+		}
 		
 		
 		if(distanceBelowVideoWrapper <= 0){
-			return defHeight;
+			return LFPP.getDefaultAvailableVideoHeight();
 		} else {
-			return Math.max((_viewportHeight - LFPP.getNavBottom()) - (distanceBelowVideoWrapper * 2), _minPlayerSize);
+			if(pinned){
+				return Math.max((_viewportHeight - LFPP.getNavBottom()) - scale(distanceBelowVideoWrapper), _minPlayerSize);
+			} else {
+				return Math.max(_viewportHeight + scale(LFPP.header.headerTotalActualHeight - distanceBelowVideoWrapper), _minPlayerSize);
+			}
 		}
 	};
 	
+	var lastPageYOffset = 0;
 	player.onScroll = function(e){
+		var pinned = LFPP.header.isNavPinned;
+		var navBottom = LFPP.getNavBottom();
+		//var scrollHeightOrig = parseInt(LFPP.el.LFPP_StickyVideoWrapper_Padding_top.css('height') || 0);
+		var scrollHeightOrig = lastPageYOffset;
+		lastPageYOffset = window.pageYOffset;
+		
+		var scrollDiff = (window.pageYOffset - scrollHeightOrig);
 		if(LFPP.player.settings.enable_dynamic_width_video_animations){
 			if(usingVelocity){
 				LFPP.el.LFPP_StickyVideoWrapper_Padding_top.clearQueue().stop();
@@ -1097,22 +1290,70 @@ jMod.CSS = `
 		}
 		
 		var newHeight = LFPP.getStickyVideoCurrentHeight();
+		var headlineHeight = parseInt(LFPP.el.LFPP_StickyVideoWrapper_Headline_Content.outerHeight());
+		
 		if(LFPP.player.settings.enable_dynamic_width_video_animations){
-			player.setPlayerHeight(newHeight, LFPP.getNavBottom());
+			if(pinned){
+				player.setPlayerHeight(newHeight, navBottom);
+			} else {
+				player.setPlayerHeight(newHeight, Math.max(navBottom - window.pageYOffset, 0));
+			}
 		} else {
-			LFPP.el.LFPP_StickyVideoWrapper_Outer.css({'height': newHeight, top: LFPP.getNavBottom()});
+			if(pinned){
+				LFPP.el.LFPP_StickyVideoWrapper_Outer.css({'height': newHeight, top: navBottom});
+			} else {
+				LFPP.el.LFPP_StickyVideoWrapper_Outer.css({'height': newHeight, top: Math.max(navBottom - window.pageYOffset, 0)});
+			}
 			LFPP.el.LFPP_StickyVideoWrapper_Padding_bottom.css('height', newHeight);
-		}
-		
-		var maxScroll = _viewportHeight - ((_minPlayerSize + LFPP.el.LFPP_StickyVideoWrapper_Headline_Content.height()) * 2) + 75;
-		player.setPlayerPaddingMaxHeight(maxScroll);
-		
-		if((maxScroll + parseInt(LFPP.el.LFPP_StickyVideoWrapper_Padding_bottom.css('height'))) <= (window.pageYOffset + _minPlayerSize)){
-			LFPP.el.LFPP_StickyVideoWrapper_Outer.addClass('LFPP_Player_Min');
-		} else {
 			
-			LFPP.el.LFPP_StickyVideoWrapper_Outer.removeClass('LFPP_Player_Min');
 		}
+		
+		if(parseInt(LFPP.el.LFPP_StickyVideoWrapper_Padding_headline.css('height') || 0) !== headlineHeight) LFPP.el.LFPP_StickyVideoWrapper_Padding_headline.css('height', headlineHeight);
+		
+		LFPP.el.LFPP_StickyVideoWrapper_Padding_header.css('height', (pinned ? navBottom : 0));
+		
+		var playerTargetRelativeBottomOffset = (newHeight + window.pageYOffset + (pinned ? navBottom : Math.max(navBottom - window.pageYOffset, 0)));// (pinned ? navBottom : 0));
+		var playerMinRelativeBottomOffset = (_minPlayerSize + window.pageYOffset + (pinned ? navBottom : Math.max(navBottom - window.pageYOffset, 0)));
+		var offsetDiff = Math.abs(playerTargetRelativeBottomOffset - playerMinRelativeBottomOffset);
+		
+		var playerMaxOffset = Math.min((playerTargetRelativeBottomOffset > playerMinRelativeBottomOffset ? playerTargetRelativeBottomOffset : playerMinRelativeBottomOffset), _viewportHeight - _minPlayerSize - Math.min(headlineHeight, 110) - (pinned ? LFPP.header.topBannerActualHeight : LFPP.header.headerTotalActualHeight));//
+		
+		var maxScroll = parseInt(Math.min(playerMaxOffset, Math.max(playerTargetRelativeBottomOffset - newHeight - Math.min(headlineHeight, 110), 0)));
+		if(
+				playerTargetRelativeBottomOffset <= playerMinRelativeBottomOffset
+				|| (newHeight - _minPlayerSize) < 10
+				|| (scrollDiff > 0 && offsetDiff <= (headlineHeight - 20) && ((playerMinRelativeBottomOffset + headlineHeight) < ((LFPP.el.breadcrumbs.offset().top || 0) - scrollDiff)))
+				//|| ((offsetDiff !== 0 && (offsetDiff / playerMinRelativeBottomOffset) < 0.20) && ((playerTargetRelativeBottomOffset + headlineHeight) < (LFPP.el.breadcrumbs.offset().top || 0)))
+				//|| Math.abs(playerTargetRelativeBottomOffset - playerMinRelativeBottomOffset) < headlineHeight
+			){
+			
+			if(!LFPP.el.LFPP_StickyVideoWrapper_Outer.hasClass('LFPP_Player_Min')) LFPP.el.LFPP_StickyVideoWrapper_Outer.addClass('LFPP_Player_Min');
+			
+		} else {
+			if(LFPP.el.LFPP_StickyVideoWrapper_Outer.hasClass('LFPP_Player_Min')) LFPP.el.LFPP_StickyVideoWrapper_Outer.removeClass('LFPP_Player_Min');
+		}
+		/*
+		console.log('Calc Maxscroll',
+			'\r\n\t_viewportHeight: ', _viewportHeight,
+			'\r\n\tpageYOffset: ', window.pageYOffset,
+			'\r\n\tnavBottom: ', navBottom,
+			'\r\n\tscrollDiff: ', scrollDiff,
+			'\r\n\tnewHeight: ', newHeight,
+			'\r\n\t_minPlayerSize: ', _minPlayerSize,
+			'\r\n\theadlineHeight: ', headlineHeight,
+			'\r\n\tnavActualHeight: ', LFPP.header.navActualHeight,
+			'\r\n\tplayerTargetRelativeBottomOffset: ', playerTargetRelativeBottomOffset,
+			'\r\n\tplayerMinRelativeBottomOffset: ', playerMinRelativeBottomOffset,
+			'\r\n\tplayerMaxOffset: ', playerMaxOffset,
+			'\r\n\tmaxScroll: ', maxScroll,
+			'\r\n\tWrapper_Outer ClassName: ', LFPP.el.LFPP_StickyVideoWrapper_Outer[0].className,
+			'\r\n\tbreadcrumbs offset top: ', LFPP.el.breadcrumbs.offset().top,
+			'\r\n\tbreadcrumbs offset top - scrollDiff: ', LFPP.el.breadcrumbs.offset().top - scrollDiff,
+			'\r\n'
+		);
+		*/
+		
+		player.setPlayerPaddingMaxHeight(Math.min(maxScroll, playerMaxOffset));
 	};
 	
 	player.onWindowResize = function(e, a){
@@ -1236,6 +1477,8 @@ jMod.CSS = `
 				+ '</div>'
 			+ '</div>'
 			+ '<div id="LFPP_StickyVideoWrapper_Padding" style="">'
+				+ '<div id="LFPP_StickyVideoWrapper_Padding_header" style=""></div>'
+				+ '<div id="LFPP_StickyVideoWrapper_Padding_headline" style=""></div>'
 				+ '<div id="LFPP_StickyVideoWrapper_Padding_top" style=""></div>'
 				+ '<div id="LFPP_StickyVideoWrapper_Padding_bottom" style=""></div>'
 			+ '</div>'
@@ -1273,24 +1516,10 @@ jMod.CSS = `
 		}
 		
 		setTimeout(waitForDownloadWrapper, 50, 0);
-		
-		if(!LFPP.player.settings.enable_video_headline){
-			LFPP.el.LFPP_StickyVideoWrapper_Headline.css('display', 'none');
-		}
-		
-		var navObserver = new MutationObserver(function(mutations) {
-			var _break = false;
-			mutations.forEach(function(mutation) {
-				if(!_break && mutation.attributeName === 'class') {
-					setAsap(player.onScroll);
-					_break = true;
-				}
-			});    
-		});
-
-		var navObConfig = {attributes: true, childList: false, characterData: false, subtree: false};
-
-		navObserver.observe(LFPP.el.lmgNav[0], navObConfig);
+		LFPP.header.onHeaderStateChange = function(data){
+			LFPP.log('VideoPlayer::onHeaderStateChange fired', data);
+			setAsap(player.onScroll);
+		};
 		
 		window.onscroll = player.onScroll;
 		
@@ -1321,8 +1550,8 @@ jMod.CSS = `
 }
 `.toString();
 			
-			var videoSizeSettings = jMod.Settings.get('Video_Size').split(',');
-			//console.log('Settings "Video_Size": ', jMod.Settings.get('Video_Size'));
+			var videoSizeSettings = getJModSetting('Video_Size', LFPP.getSettingDefault('Video_Size')).split(',');
+			//console.log('Settings "Video_Size": ', getJModSetting('Video_Size', ''));
 			
 			if(LFPP.player.settings.enable_video_size_settings){
 				if(LFPP.player.settings.enable_dynamic_width_video){
@@ -1342,100 +1571,112 @@ jMod.CSS = `
 
 })();
 	
-	function InitSettings(){
-		console.log('jMod.Settings Example');
-		var SettingOptions = {
-			title: 'LTT FP++ Settings',
-			settings: [
-				{
-					name: 'Video_Size',
-					description: 'Video Size',
-					options: {
-						'enable_video_size_settings': {
-							label: 'Enable/Disable All Video Size Settings',
-							on: 'ON',
-							off: 'OFF'
-						},
-						'enable_dynamic_width_video': {
-							label: 'Dynamic Video Player Size',
-							on: 'ON',
-							off: 'OFF',
-							tooltip: {
-								innerHTML: 'Full width video that shrinks when you scroll down',
-								placement: 'right'
-							}
-						},
-						'enable_dynamic_width_video_animations': {
-							label: 'Animate Dynamic Video Player',
-							on: 'ON',
-							off: 'OFF',
-							tooltip: {
-								innerHTML: 'Smooth out the height changes with CSS transitions',
-								placement: 'right'
-							}
-						},
-						'enable_video_headline': {
-							label: 'Show the video headline and download link',
-							on: 'ON',
-							off: 'OFF'
+	
+	LFPP.SettingOptions = {
+		title: 'LTT FP++ Settings',
+		settings: [
+			{
+				name: 'Video_Size',
+				description: 'Video Size',
+				options: {
+					'enable_video_size_settings': {
+						label: 'Enable/Disable All Video Size Settings',
+						on: 'ON',
+						off: 'OFF'
+					},
+					'enable_dynamic_width_video': {
+						label: 'Dynamic Video Player Size',
+						on: 'ON',
+						off: 'OFF',
+						tooltip: {
+							innerHTML: 'Full width video that shrinks when you scroll down',
+							placement: 'right'
 						}
 					},
-					tab: 'Tab_Videos',
-					section: 'Player',
-					type: 'toggle',
-					'default': 'enable_video_size_settings,enable_dynamic_width_video,enable_dynamic_width_video_animations,enable_video_headline'
-				},
-				{
-					name: 'Min_Video_Player_Height',
-					description: 'Minimum video player height when scrolling down',
-					tooltip: {
-						innerHTML: 'Valid examples: default, 300px, 1/3',
-						placement: 'top-right'
+					'enable_dynamic_width_video_animations': {
+						label: 'Animate Dynamic Video Player',
+						on: 'ON',
+						off: 'OFF',
+						tooltip: {
+							innerHTML: 'Smooth out the height changes with CSS transitions',
+							placement: 'right'
+						}
 					},
-					tab: 'Tab_Videos',
-					section: 'Player',
-					type: 'input',
-					'default': 'default'
-				}
-			],
-			tabs: [
-				// (optional) Additional Custom tab
-				{
-					name: 'About',
-					innerHTML: [
-						{
-							type: 'h1',
-							innerHTML: 'About'
-						},
-						{
-							type: 'p',
-							innerHTML: 'foo bar'
-						}
-					]
+					'enable_video_headline': {
+						label: 'Show the video headline and download link',
+						on: 'ON',
+						off: 'OFF'
+					}
 				},
-				// (optional) Adding information about a tab referenced by a setting
-				{
-					name: 'Tab_Videos',
-					displayName: 'Floatplane Videos',
-					content: {
-						footer: {
-							type: 'div',
-							innerHTML: ''
-						}
+				tab: 'Tab_Videos',
+				section: 'Player',
+				type: 'toggle',
+				'default': 'enable_video_size_settings,enable_dynamic_width_video,enable_dynamic_width_video_animations,enable_video_headline'
+			},
+			{
+				name: 'Min_Video_Player_Height',
+				description: 'Minimum video player height when scrolling down',
+				tooltip: {
+					innerHTML: 'Valid examples: default, 300px, 1/3',
+					placement: 'top-right'
+				},
+				tab: 'Tab_Videos',
+				section: 'Player',
+				type: 'input',
+				'default': 'default'
+			}
+		],
+		tabs: [
+			// (optional) Additional Custom tab
+			{
+				name: 'About',
+				innerHTML: [
+					{
+						type: 'h1',
+						innerHTML: 'About'
+					},
+					{
+						type: 'p',
+						innerHTML: 'foo bar'
+					}
+				]
+			},
+			// (optional) Adding information about a tab referenced by a setting
+			{
+				name: 'Tab_Videos',
+				displayName: 'Floatplane Videos',
+				content: {
+					footer: {
+						type: 'div',
+						innerHTML: ''
 					}
 				}
-			],
-			// (optional) Change the order of the tabs. Tabs left out will be added after in the order they are referenced by your settings
-			tabOrder: ['About', 'Tab_Videos'],
-			// (optional) Set the active tab
-			activeTab: 'Tab_Videos',
-			// (optional) callback that fires before the settings dialog closes
-			onBeforeHide: function(e){
-				console.log('Settings on before hide');
 			}
-		};
+		],
+		// (optional) Change the order of the tabs. Tabs left out will be added after in the order they are referenced by your settings
+		tabOrder: ['About', 'Tab_Videos'],
+		// (optional) Set the active tab
+		activeTab: 'Tab_Videos',
+		// (optional) callback that fires before the settings dialog closes
+		onBeforeHide: function(e){
+			console.log('Settings on before hide');
+		}
+	};
+	
+	LFPP.getSettingDefault = function(name){
+		var _settings = LFPP.SettingOptions.settings;
+		for(var i = 0; i < _settings.length; i++){
+			if(_settings[i].name === name){
+				return _settings[i]['default'];
+			}
+		}
+	}
+	
+
+	function InitSettings(){
+		console.log('jMod.Settings Init');
 		
-		jMod.Settings(SettingOptions);
+		jMod.Settings(LFPP.SettingOptions);
 	}
 	
 	
