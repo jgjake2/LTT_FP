@@ -13,7 +13,7 @@
 // @require          https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js
 // @require          https://code.jmod.info/velocity.min.js
 // @require          https://code.jmod.info/0.0.20/jMod.min.js
-// @version          0.3.3
+// @version          0.3.4
 // @grant            unsafeWindow
 // @grant            GM_info
 // @grant            GM_log
@@ -30,5 +30,5 @@
 // @unwrap
 // @noframes
 // @run-at           document-start
-// @jMod             {"debug": false, "API": {"log": {"debug": true}}, "script": {"script_name": "LTT_FP++", "username": "jgjake2"}}
+// @jMod             {"debug": false, "API": {"log": {"debug": false}}, "script": {"script_name": "LTT_FP++", "username": "jgjake2"}}
 // ==/UserScript==

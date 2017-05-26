@@ -15,13 +15,111 @@ jMod.CSS = `
 .jmod-na {z-index: 16400;}
 .jmod-na .modal-backdrop {z-index: 16400;}
 .jmod-na .modal {z-index: 16500;}
+.jmod-na .tooltip {z-index: 16600;}
+.jmod-na .form-control.pref[type="text"] {
+	display: block;
+	width: 100%;
+	height: 32px;
+	padding: 6px 12px;
+	font-size: 13px;
+	line-height: 1.42857143;
+	color: #555;
+	background-color: #fff;
+	background-image: none;
+	border: 1px solid #ccc;
+	transition: border-color ease-in-out .15s,box-shadow ease-in-out .15s;
+	transition: all border-color ease-in-out .15s,box-shadow ease-in-out .15s ease-out;
+	max-width:unset;
+}
 `.toString();
+
+    var jModLogInfo = (function(){
+		var infoDefaultStyle = 'display: run-in;',
+			fontFamily = 'font-family:"Sansation","Open Sans",Arial;';
+			//#DB4105
+			//#C73A03
+		var headStyle = infoDefaultStyle + 'font-weight:900;font-size:1.45em;color:#DB4105;' + fontFamily,
+			titleStyle = infoDefaultStyle + "font-weight:200;font-size:110%;color:green;" + fontFamily,
+			textStyle = infoDefaultStyle + "font-weight:normal;font-size:100%;color:blue;";
+		function jModLogInfo(title, text) {
+			var i = 2,
+				tArgs = [ [
+					"LTT_FP++",
+					"string",
+					headStyle
+				] ];
+			
+				//" - ", "string", "display: run-in;color:#000;" ]
+			if (typeof text === "string" || typeof text === "number") {
+				tArgs = tArgs.concat([ [ title || " ", "%s", titleStyle ], [ " \n", "string" ], [ text || "", "%s", textStyle] ]);
+			} else {
+				if(arguments.length > 1) i--;
+				tArgs = tArgs.concat([ [ title || "", "%s", titleStyle ] ]);
+			}
+			fmtBuild = new jMod.API.logFormatBuilder(tArgs);
+			
+			if (arguments.length > i) fmtBuild.add(" \n", "string");
+			for (i; i < arguments.length; i++) fmtBuild.add(arguments[i]);
+			jMod.Info.apply(jMod.log, fmtBuild.build());
+		};
+		
+		return jModLogInfo;
+	})();
 	
 	var LFPP = {
 		el: {},
 		log: (_debug ? console.log : function(){})
+		//log: (_debug ? jModLogInfo : function(){})
 	};
 	var _cache = {};
+	var _viewportHeight = 0,
+		_viewportWidth = 0,
+		enabledLogs = [
+			['Core', '*'],
+			['VideoPlayer', '*'],
+			['PageHandler', '*'],
+			['VideoList', '*']
+		];
+		
+		
+	function addEnabledLog(name){
+		enabledLogs.push(name.split('::'));
+	}
+	function isLoggerEnabled(name){
+		var tmp;
+		for(var i = 0; i < enabledLogs.length; i++){
+			tmp = enabledLogs[i];
+			if(tmp[0] === name){
+				if(tmp.length === 1 || tmp[1] === '*'){return true;}
+				return (new RegExp('(?:^|\\:\\:)' + tmp[1].replace(/\*/gm, '.*'), 'i'));
+			}
+		}
+		return false;
+	}
+	
+
+	
+	LFPP.getLog = function(name){
+		var _isEnabled;
+		
+		function refresh(){
+			_isEnabled = isLoggerEnabled(name);
+		}
+		function isEnabled(fnName){
+			if(!_isEnabled) return false;
+			if(_isEnabled === true || _isEnabled.test(fnName)) return true
+		}
+		function customLog(fnName){
+			arguments[0] = name + '::' + arguments[0];
+			if(_debug && isEnabled(fnName)) {return jModLogInfo.apply(jModLogInfo, arguments);}
+		}
+		customLog.refresh = refresh;
+		customLog.disable = function(){_isEnabled = false;};
+		customLog.enable = function(){_isEnabled = true;};
+		refresh();
+		return customLog;
+	};
+	var coreLog = LFPP.getLog('Core');
 	
 	LFPP.addCachedElement = function(name, selector){
 		if(!selector) selector = '#' + name;
@@ -52,7 +150,7 @@ jMod.CSS = `
 		'elUserNav', 'ipsLayout_header', 'ipsLayout_body', 'ipsLayout_contentArea', 'ipsLayout_mainArea', 'lmgNav',
 		'elFullSettings',
 		'LFPP_StickyVideoWrapper_Outer', 'LFPP_StickyVideoWrapper_Inner', 'LFPP_StickyVideoWrapper_Headline', 'LFPP_StickyVideoWrapper_Headline_Content',
-		'LFPP_StickyVideoWrapper_Padding', 'LFPP_StickyVideoWrapper_Padding_header', 'LFPP_StickyVideoWrapper_Padding_headline', 'LFPP_StickyVideoWrapper_Padding_top', 'LFPP_StickyVideoWrapper_Padding_bottom'
+		'LFPP_StickyVideoWrapper_Padding', 'LFPP_StickyVideoWrapper_Padding_header', 'LFPP_StickyVideoWrapper_Padding_headline', 'LFPP_StickyVideoWrapper_Padding_yscroll', 'LFPP_StickyVideoWrapper_Padding_player'
 	]);
 	LFPP.addCachedElements({
 		'headerBlock': '#ipsLayout_header .ipsResponsive_showDesktop.ipsResponsive_block',
@@ -107,8 +205,8 @@ jMod.CSS = `
 	
 	LFPP.getHeaderBlockHeight = function(){return (LFPP.el.headerBlock && LFPP.el.headerBlock.length ? parseInt(LFPP.el.headerBlock.height()) : -1);};
 	
-	LFPP.getViewportHeight = function(){return $(window).height();};
-	LFPP.getViewportWidth = function(){return $(window).width();};
+	LFPP.getViewportHeight = function(){return (_viewportHeight = $(window).height());};
+	LFPP.getViewportWidth = function(){return (_viewportWidth = $(window).width());};
 	LFPP.getPageYOffset = function(){return (window.pageYOffset || unsafeWindow.pageYOffset);};
 	
 	
@@ -116,7 +214,7 @@ jMod.CSS = `
 	var _settingsButtonAdded = false;
 	function addSettingsButton(){
 		if(_settingsButtonAdded) return;
-		LFPP.log('addSettingsButton');
+		coreLog('addSettingsButton', 'Settings Button Added');
 		
 		if(LFPP.el.elUserNav && LFPP.el.elUserNav.length){
 			LFPP.el.elUserNav.prepend(''
@@ -137,10 +235,12 @@ jMod.CSS = `
 		}
 	}
 	
+	[["src/modules/*"]]
+	
 	var _initialized = false;
 	function init(){
 		if(_initialized) return;
-		LFPP.log('init');
+		coreLog('init', 'initialized');
 		
 		InitSettings();
 		addSettingsButton();
@@ -148,19 +248,19 @@ jMod.CSS = `
 	
 	// Start DOM interactions
 	function onDOMReadyCB(){
-		LFPP.log('onDOMReadyCB');
+		coreLog('onDOMReadyCB', 'onDOMReady Fired');
 		init();
 	}
 	//jMod.onDOMReady = InitSettings;
 	jMod.onDOMReady = onDOMReadyCB;
 	
-	/*
+	
 	// jMod fully initialized
 	function onReadyCB(){
-		console.log('onReadyCB');
+		coreLog('onReadyCB', 'onReady Fired');
 	}
 	jMod.onReady = onReadyCB;
-
+	/*
 	// Page is ready
 	function onPageReadyCB(){
 		console.log('onPageReadyCB');
@@ -176,7 +276,7 @@ jMod.CSS = `
 	//console.log('addGlyphicons');
 	//jMod.API.addGlyphicons();
 	
-	[["src/modules/*"]]
+	
 
 	[["src/InitSettings.js"]]
 	

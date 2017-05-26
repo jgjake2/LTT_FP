@@ -2,9 +2,40 @@
 	/* Page state and events handler */
 	
 	var videos = LFPP.videos = {
-		events: {}
+		events: {},
+		settings: {}
 	};
 	
+	var videoListLog = LFPP.getLog('VideoList');
+	
+	function getJModSetting(name, def){var tmp = jMod.Settings.get(name);return (typeof tmp === "undefined" ? def : tmp);}
+	   
+	Object.defineProperties(LFPP.videos.settings, {
+		'add_thumbs_to_video_list': {get: function() {return (getJModSetting('Thumbs_General', LFPP.getSettingDefault('Thumbs_General')).indexOf('add_thumbs_to_video_list') > -1);},enumerable: true, configurable: false},
+		'show_preview_on_hover': {get: function() {return (getJModSetting('Thumbs_General', LFPP.getSettingDefault('Thumbs_General')).indexOf('show_preview_on_hover') > -1);},enumerable: true, configurable: false},
+		'keep_preview_after_hover': {get: function() {return (getJModSetting('Thumbs_General', LFPP.getSettingDefault('Thumbs_General')).indexOf('keep_preview_after_hover') > -1);},enumerable: true, configurable: false},
+		'thumb_animation_speed': {get: function() {
+			var tmp = getJModSetting('thumb_animation_speed', LFPP.getSettingDefault('thumb_animation_speed')).trim();
+			try{return parseInt(tmp);} catch(e) {}
+			return LFPP.getSettingDefault('thumb_animation_speed');
+		}, enumerable: true, configurable: false}
+	});
+	
+	
+	//LFPP.videos.settings.thumb_animation_speed
+	//LFPP.videos.settings.add_thumbs_to_video_list
+	//LFPP.videos.settings.show_preview_on_hover
+	//LFPP.videos.settings.keep_preview_after_hover
+/*
+jMod.CSS = `
+.LFPP_Video_ThumbPreview {
+	opacity:0;
+}
+.LFPP_Video_Thumb_Wrapper:hover .LFPP_Video_ThumbPreview {
+	opacity: 1 !important;
+}
+`.toString();
+*/
 	//var _vcache = videos._cache = {};
 	
 	videos.cache = (function(){
@@ -85,34 +116,6 @@
 		
 	});
 	
-	/*
-	var _getVideoPageIFrame = {};
-	function getVideoPageIFrame(url){
-		if(_getVideoPageIFrame[url]){
-			return _getVideoPageIFrame[url];
-		}
-		
-		_getVideoPageIFrame[url] = new Promise(function(resolve, reject){
-			var responded = false,
-				respond = function(a, b){
-					if(!responded){
-						if(b === false){
-							return reject(a);
-						}
-						return resolve(a);
-					}
-				};
-			
-			setAsap(function(){
-				
-				
-			});
-			
-		});
-		
-		return _getVideoPageIFrame[url];
-	}
-	*/
 	
 	var _requestCount = 0;
 	var _getVideoPageIFrameURL = {};
@@ -254,16 +257,107 @@
 			var topicURL = $topicTitleLink.attr('href') || $topicTitleLink[0].href;
 			if(topicURL){
 				getVideoThumb(topicURL).then(function(posterURL){
+					posterURL = posterURL || '';
+					var spriteURL = posterURL.replace('/thumbnails/', '/sprite/');
 					var $divIcon = $('.ipsDataItem_icon', $thumb);
 					var $divIconLink = $('.ipsDataItem_icon > a', $thumb);
 					
 					$divIcon.css({width: '230px', 'max-width': '230px', 'min-width': '230px'});
-					$divIconLink.css('display', 'inline-block');
+					$divIconLink.css({'display': 'inline-block', 'vertical-align': 'middle'});
+
+					$divIcon.append(''
+						+ '<div class="LFPP_Video_Thumb_Wrapper" style="display:inline-block;width:200px;height:112.5px;vertical-align:middle;">'
+							+ '<a class="" href="' + topicURL + '" style="display: inline-block;vertical-align: middle;">'
+								+ '<div style="position:absolute;width:200px;height:112.5px;">'
+									+ '<div class="LFPP_Video_Thumb" style="width:200px;height:112.5px;overflow:hidden;">'
+										+ '<img src="' + posterURL + '" style="max-width:200px;height:auto;width:200px;">'
+									+ '</div>'
+									+ '<div class="LFPP_Video_ThumbPreview" style="position:absolute;top:0;left:0;width:200px;height:112.5px;overflow:hidden;">'
+										+ '<img src="" style="height:112.5px;width:auto;margin-left:0px;display:none;" data-frame="0" >'
+									+ '</div>'
+								+ '</div>'
+							+ '</a>'
+						+ '</div>'
+					);
 					
-					$divIcon.append('<div class="" style="display: inline-block;max-width:200px;height:auto;width:200px;min-height:100px;max-height:500px;">' + (posterURL === '' ? '&nbsp;' : ('<a href="' + topicURL + '"><img src="' + posterURL + '" style="max-width:200px;height:auto;width:200px;"></a>')) + '</div>');
+					
+					if(LFPP.videos.settings.show_preview_on_hover){
+						var $LFPP_Video_Thumb_Wrapper = $('.LFPP_Video_Thumb_Wrapper', $divIcon);
+						var $LFPP_Video_Thumb = $('.LFPP_Video_Thumb', $divIcon);
+						var $LFPP_Video_ThumbPreview = $('.LFPP_Video_ThumbPreview', $divIcon);
+						var $LFPP_Video_ThumbPreview_Image = $('.LFPP_Video_ThumbPreview img', $divIcon);
+						var thumbPreviewImg = $LFPP_Video_ThumbPreview_Image[0];
+						var thumbPreviewWidth, maxThumbFrames;
+						
+						
+						var delayBetweenFrames = parseInt(LFPP.videos.settings.thumb_animation_speed || 300);
+						var _stopped = true;
+						var _animationTimer = null;
+						function animateThumb(){
+							_animationTimer = null;
+							if(_stopped) return;
+							
+							var currentFrame = parseInt(thumbPreviewImg.dataset.frame || 0) + 1;
+							if(currentFrame > maxThumbFrames){
+								currentFrame = 0;
+							}
+							
+							thumbPreviewImg.dataset.frame = currentFrame;
+							$LFPP_Video_ThumbPreview_Image.css('margin-left', (currentFrame * -200) + 'px');
+							
+							_animationTimer = setTimeout(animateThumb, delayBetweenFrames);
+						}
+						function stopAnimateThumb(){
+							_stopped = true;
+							if(_animationTimer){
+								try {
+									clearTimeout(_animationTimer);
+								} catch(e) {}
+								_animationTimer = null;
+							}
+							if(!LFPP.videos.settings.keep_preview_after_hover){
+								$LFPP_Video_ThumbPreview_Image.css('display', 'none');
+							}
+						}
+						function startAnimateThumb(){
+							_animationTimer = null;
+							if(!_stopped) return;
+							_stopped = false;
+							
+							if(!thumbPreviewWidth || !maxThumbFrames){
+								thumbPreviewWidth = parseInt($LFPP_Video_ThumbPreview_Image.width());
+								maxThumbFrames = Math.round(thumbPreviewWidth / 200);
+							}
+							
+							if(thumbPreviewWidth){
+								_animationTimer = setTimeout(animateThumb, delayBetweenFrames);
+							} else {
+								_animationTimer = setTimeout(startAnimateThumb, delayBetweenFrames);
+							}
+						}
+						
+						$LFPP_Video_Thumb_Wrapper.hover(function(){
+							if(!$LFPP_Video_ThumbPreview_Image.attr('src')){
+								thumbPreviewImg.addEventListener('load', function() {
+									$LFPP_Video_ThumbPreview_Image.css('display', 'block');
+									thumbPreviewWidth = parseInt($LFPP_Video_ThumbPreview_Image.width());
+									maxThumbFrames = Math.round(thumbPreviewWidth / 200);
+								});
+								thumbPreviewImg.setAttribute('src', spriteURL);
+								_animationTimer = setTimeout(startAnimateThumb, delayBetweenFrames);
+							} else {
+								$LFPP_Video_ThumbPreview_Image.css('display', 'block');
+								startAnimateThumb();
+							}
+						}, function(){
+							stopAnimateThumb();
+						});
+					
+					}
+
 					
 				}, function(e){
-					//console.log('processPageVideoThumb error: ', topicURL, e);
+					videoListLog('processPageVideoThumb', 'Error: ', topicURL, e);
 				});
 			}
 		}
@@ -280,14 +374,14 @@
 	}
 	
 	jMod.onDOMReady = function(){
-		LFPP.log('VideoList::onDOMReadyCB');
+		videoListLog('onDOMReady', 'onDOMReady');
 		
-		if(videos.isVideoListPage){
-			console.log('is video list page');
+		if(LFPP.videos.settings.add_thumbs_to_video_list && videos.isVideoListPage){
+			videoListLog('onDOMReady', 'is video list page');
 			setAsap(processPageVideoThumbs);
 			
 			LFPP.page.onHistoryEdit = function(e, urlChanged, hashChanged){
-				console.log('onHistoryEdit fired: ', e, urlChanged, hashChanged);
+				videoListLog('onDOMReady', 'onHistoryEdit fired: ', e, urlChanged, hashChanged);
 				if(urlChanged && videos.isVideoListPage){
 					setTimeout(processPageVideoThumbs, 100);
 					setTimeout(processPageVideoThumbs, 1000);
@@ -299,7 +393,7 @@
 			//};
 			
 			LFPP.page.onPageIndexChange = function(e){
-				console.log('onPageIndexChange fired: ', e);
+				videoListLog('onDOMReady', 'onPageIndexChange fired: ', e);
 				if(urlChanged && videos.isVideoListPage){
 					setTimeout(processPageVideoThumbs, 100);
 					setTimeout(processPageVideoThumbs, 1000);

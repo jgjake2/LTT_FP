@@ -8,6 +8,7 @@
 	
 	var _pcache = page._cache = {};
 	var lastFullPageLocation, lastPageLocation, lastPageHash, lastPageIndex;
+	var pageLog = LFPP.getLog('PageHandler');
 	
 	function addEventHandler(eventName){
 		if(!page.events[eventName]){
@@ -298,90 +299,9 @@
 	}
 	
 	jMod.onDOMReady = function(){
-		LFPP.log('pageHandler::onPageReady');
+		//pageLog('pageHandler::onPageReady');
 		updateLastLocation();
-		
-		
 		setTimeout(watchLocationChange, 100);
-		
-		//window.addEventListener('beforeunload', function(e) {
-			//LFPP.log('pageHandler::onPageReady beforeunload: ', e);
-		//});
-		
-		/*
-		function _onhashchange(e){
-			LFPP.log('pageHandler::onhashchange', e);
-			//var currentFullPageLocation = window.location.toString();
-			//var currentPageLocation = lastFullPageLocation.split('#')[0];
-			//var currentPageHash = '#' + (lastFullPageLocation.split('#').length > 1 ? lastFullPageLocation.split('#')[1] : '');
-			
-			//var urlChanged = (window.location.toString() !== lastFullPageLocation);
-			var urlChanged = (e.oldURL.toString() !== e.newURL.toString());
-			//var hashChanged = urlChanged && (('#' + (lastFullPageLocation.split('#').length > 1 ? lastFullPageLocation.split('#')[1] : '')) !== lastPageHash);
-			var hashChanged = urlChanged && ((e.oldURL.toString().split('#').length > 1 ? e.oldURL.toString().split('#')[1] : '') !== (e.newURL.toString().split('#').length > 1 ? e.newURL.toString().split('#')[1] : ''));
-			
-			if(urlChanged || hashChanged) updateLastLocation();
-			page.onHashChange.fire(e, urlChanged, hashChanged);
-		}
-		
-		function _popstate(e){
-			LFPP.log('pageHandler::onpopstate', e);
-			var urlChanged = (window.location.toString() !== lastFullPageLocation);
-			var hashChanged = urlChanged && (('#' + (lastFullPageLocation.split('#').length > 1 ? lastFullPageLocation.split('#')[1] : '')) !== lastPageHash);
-			
-			if(urlChanged || hashChanged) updateLastLocation();
-			page.onHistoryEdit.fire(e, urlChanged, hashChanged);
-		}
-		
-		var export_args = {
-			defineAs: "lfpp_onhashchange",
-			allowCallbacks: true,
-			allowCrossOriginArguments: true
-		};
-		exportFunction(_onhashchange, unsafeWindow, export_args);
-		
-		var export_args2 = {
-			defineAs: "lfpp_popstate",
-			allowCallbacks: true,
-			allowCrossOriginArguments: true
-		};
-		exportFunction(_popstate, unsafeWindow, export_args2);
-		
-		console.log('pageHandler::onPageReady add listeners');
-		window.addEventListener('onhashchange', _onhashchange, false);
-		window.addEventListener('popstate', _popstate, false);
-		window.addEventListener('statechange', _popstate, false);
-		
-		unsafeWindow.addEventListener('onhashchange', unsafeWindow.lfpp_onhashchange, false);
-		unsafeWindow.addEventListener('popstate', unsafeWindow.lfpp_popstate, false);
-		unsafeWindow.addEventListener('statechange', unsafeWindow.lfpp_popstate, false);
-	
-		page.onHistoryEdit = function(e, urlChanged, hashChanged){
-			console.log('LFPP.page.onHistoryEdit fired: ', e, urlChanged, hashChanged);
-		};
-		
-		page.onHashChange = function(e, urlChanged, hashChanged){
-			console.log('LFPP.page.onHashChange fired: ', e, urlChanged, hashChanged);
-		};
-		*/
-		
-		
-		/*
-		page.onHistoryEdit = function(e, urlChanged, hashChanged){
-			console.log('LFPP.page.onHistoryEdit fired: ', e, urlChanged, hashChanged);
-		};
-		
-		page.onHashChange = function(e, urlChanged, hashChanged){
-			console.log('LFPP.page.onHashChange fired: ', e, urlChanged, hashChanged);
-		};
-		
-		page.onPageIndexChange = function(e){
-			console.log('LFPP.page.onPageIndexChange fired: ', e);
-		};
-		*/
-		
-		
-		console.log('pageHandler::onPageReady done');
 	};
 	
 })();
