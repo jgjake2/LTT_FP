@@ -1,5 +1,6 @@
 # LTT_FP++
 LinusTechTips Floatplane Club Enhancer
+[Original Post on LTT Forum](https://linustechtips.com/main/topic/777390-linustechtips-floatplane-club-greasemonkey-script/)
 
 ## Working Features
 - [x]  Full width videos at start
