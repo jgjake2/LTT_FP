@@ -77,8 +77,8 @@ jMod.CSS = `
 		enabledLogs = [
 			['Core', '*'],
 			['VideoPlayer', '*'],
-			['PageHandler', '*'],
-			['VideoList', '*']
+			//['PageHandler', '*'],
+			//['VideoList', '*']
 		];
 		
 		
@@ -147,10 +147,11 @@ jMod.CSS = `
 	};
 	
 	LFPP.addCachedElements([
-		'elUserNav', 'ipsLayout_header', 'ipsLayout_body', 'ipsLayout_contentArea', 'ipsLayout_mainArea', 'lmgNav',
+		'elUserNav', 'ipsLayout_header', 'ipsLayout_body', 'ipsLayout_footer', 'ipsLayout_contentArea', 'ipsLayout_mainArea', 'lmgNav',
 		'elFullSettings',
 		'LFPP_StickyVideoWrapper_Outer', 'LFPP_StickyVideoWrapper_Inner', 'LFPP_StickyVideoWrapper_Headline', 'LFPP_StickyVideoWrapper_Headline_Content',
-		'LFPP_StickyVideoWrapper_Padding', 'LFPP_StickyVideoWrapper_Padding_header', 'LFPP_StickyVideoWrapper_Padding_headline', 'LFPP_StickyVideoWrapper_Padding_yscroll', 'LFPP_StickyVideoWrapper_Padding_player'
+		'LFPP_FixedPage_Wrapper', 'LFPP_FixedPage_Padding',
+		//'LFPP_StickyVideoWrapper_Padding', 'LFPP_StickyVideoWrapper_Padding_header', 'LFPP_StickyVideoWrapper_Padding_headline', 'LFPP_StickyVideoWrapper_Padding_yscroll', 'LFPP_StickyVideoWrapper_Padding_player'
 	]);
 	LFPP.addCachedElements({
 		'headerBlock': '#ipsLayout_header .ipsResponsive_showDesktop.ipsResponsive_block',
@@ -243,7 +244,7 @@ jMod.CSS = `
 		coreLog('init', 'initialized');
 		
 		InitSettings();
-		addSettingsButton();
+		
 	}
 	
 	// Start DOM interactions
@@ -251,15 +252,113 @@ jMod.CSS = `
 		coreLog('onDOMReadyCB', 'onDOMReady Fired');
 		init();
 	}
-	//jMod.onDOMReady = InitSettings;
-	jMod.onDOMReady = onDOMReadyCB;
 	
+	function onBodyReadyCB(){
+		coreLog('onBodyReadyCB', 'onBodyReady Fired');
+		addSettingsButton();
+	}
+	
+	function onFooterReadyCB(){
+		coreLog('onFooterReadyCB', 'onFooterReady Fired');
+		addSettingsButton();
+	}
+	
+	var isChrome = /Chrome/i.test(window.navigator.userAgent) && /Google\s*Inc/i.test(window.navigator.vendor);
+	var DOMReady = false,
+		BodyReady = false,
+		FooterReady = false;
+	function onDOMReady(){
+		if(DOMReady) return;
+		DOMReady = true;
+		onDOMReadyCB();
+		LFPP.page.onDOMReady.fire();
+		if(window.document && document.getElementById('ipsLayout_body')){
+			onBodyReady();
+			if(!FooterReady && window.document && document.getElementById('ipsLayout_footer')){
+				onFooterReady();
+			}
+		}
+	}
+	
+	function onBodyReady(){
+		if(BodyReady) return;
+		BodyReady = true;
+		if(!DOMReady) onDOMReady();
+		onBodyReadyCB();
+		LFPP.page.onBodyReady.fire();
+		if(window.document && document.getElementById('ipsLayout_footer')){
+			onFooterReady();
+		}
+	}
+	
+	function onFooterReady(){
+		if(FooterReady) return;
+		FooterReady = true;
+		if(!DOMReady) onDOMReady();
+		if(!BodyReady) onBodyReady();
+		onFooterReadyCB();
+		LFPP.page.onFooterReady.fire();
+	}
+	
+	function checkDocument(){
+		if(DOMReady && BodyReady && FooterReady) return true;
+		//coreLog('beforescriptexecute', 'beforescriptexecute Fired', e);
+		if(window.document && window.document.body){
+			if(!DOMReady) onDOMReady();
+			if(!BodyReady && document.getElementById('ipsLayout_body')){
+				onBodyReady();
+			}
+			if(BodyReady && !FooterReady && document.getElementById('ipsLayout_footer')){
+				onFooterReady();
+				return true;
+			}
+		}
+		
+	}
+	
+	//jMod.onDOMReady = InitSettings;
+	jMod.onDOMReady = onDOMReady;
+	
+	jMod.beforescriptexecute = function(e){
+		return checkDocument();
+	};
+	
+	if(isChrome){
+		/*
+		document.addEventListener('readystatechange', function(e){
+			//coreLog('readystatechange', 'readystatechange Fired', document.readyState, e);
+			checkDocument();
+		}, true);
+		*/
+		
+		var _initCount = 0;
+		var _initTimer = null;
+		_initTimer = setInterval(function(){
+			if(!_initTimer || checkDocument() === true || _initCount > 50){
+				try {
+					clearInterval(_initTimer);
+				} catch(e) {}
+				_initTimer = null;
+			}
+			_initCount++;
+		}, 30);
+	}
 	
 	// jMod fully initialized
+	/*
 	function onReadyCB(){
 		coreLog('onReadyCB', 'onReady Fired');
+		if(!DOMReady) onDOMReady();
+		if(!BodyReady && document.getElementById('ipsLayout_body')){
+			onBodyReady();
+			if(!FooterReady && document.getElementById('ipsLayout_footer')){
+				onFooterReady();
+				return true;
+			}
+		}
 	}
 	jMod.onReady = onReadyCB;
+	*/
 	/*
 	// Page is ready
 	function onPageReadyCB(){
@@ -280,5 +379,6 @@ jMod.CSS = `
 
 	[["src/InitSettings.js"]]
 	
+	checkDocument();
 	
 })($.noConflict());

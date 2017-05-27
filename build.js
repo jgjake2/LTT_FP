@@ -87,10 +87,22 @@ var processedFile = origFile + '';
 
 var match;
 
+function filePrioritySort(a, b){
+	if(/\bpageHandler\.js$/i.test(a)){
+		return -1;
+	} else if(/\bpageHandler\.js$/i.test(b)){
+		return 1;
+	}
+	return 0;
+}
+
 function replaceFileRef(replaceStr, fileName){
 	var file = '';
 	if(/\/\*$/.test(fileName)){
 		var _files = fs.readdirSync(fileName.slice(0, -1), 'utf8');
+		
+		_files.sort(filePrioritySort);
+		//console.log(_files);
 		_files.forEach(function(_file){
 			file += (file ? '\r\n' : '') + (getFile(fileName.slice(0, -1) + _file) || '');
 		});

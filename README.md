@@ -11,5 +11,6 @@ LinusTechTips Floatplane Club Enhancer
 
 ## ToDo
 - [x]  Fix sticky video player to handle an unpinned header
-- [ ]  Smooth out animations
+- [x]  Smooth out animations
+- [x]  Speed up page loading
 - [ ]  Reduce number of timers used

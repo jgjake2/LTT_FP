@@ -373,15 +373,15 @@ jMod.CSS = `
 		});
 	}
 	
-	jMod.onDOMReady = function(){
-		videoListLog('onDOMReady', 'onDOMReady');
+	LFPP.page.onBodyReady = function(){
+		//videoListLog('onBodyReady', 'onBodyReady');
 		
 		if(LFPP.videos.settings.add_thumbs_to_video_list && videos.isVideoListPage){
-			videoListLog('onDOMReady', 'is video list page');
+			videoListLog('onBodyReady', 'is video list page');
 			setAsap(processPageVideoThumbs);
 			
 			LFPP.page.onHistoryEdit = function(e, urlChanged, hashChanged){
-				videoListLog('onDOMReady', 'onHistoryEdit fired: ', e, urlChanged, hashChanged);
+				videoListLog('onBodyReady', 'onHistoryEdit fired: ', e, urlChanged, hashChanged);
 				if(urlChanged && videos.isVideoListPage){
 					setTimeout(processPageVideoThumbs, 100);
 					setTimeout(processPageVideoThumbs, 1000);
@@ -393,7 +393,7 @@ jMod.CSS = `
 			//};
 			
 			LFPP.page.onPageIndexChange = function(e){
-				videoListLog('onDOMReady', 'onPageIndexChange fired: ', e);
+				videoListLog('onBodyReady', 'onPageIndexChange fired: ', e);
 				if(urlChanged && videos.isVideoListPage){
 					setTimeout(processPageVideoThumbs, 100);
 					setTimeout(processPageVideoThumbs, 1000);

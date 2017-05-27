@@ -13,6 +13,7 @@
 	function addEventHandler(eventName){
 		if(!page.events[eventName]){
 			page.events[eventName] = {
+				hasFired: false,
 				_count: 0,
 				cb: {},
 				add: function(fn){
@@ -41,6 +42,7 @@
 					}
 				},
 				fire: function(){
+					this.hasFired = true;
 					var r = null;
 					for(var key in this.cb){
 						if(typeof this.cb[key] === "function"){
@@ -71,7 +73,7 @@
 		}
 	}
 	
-	addEventHandlers(['historyEdit', 'hashChange', 'pageIndexChange', 'headerStateChange']);
+	addEventHandlers(['historyEdit', 'hashChange', 'pageIndexChange', 'headerStateChange', 'DOMReady', 'BodyReady', 'FooterReady']);
 	
 	Object.defineProperties(LFPP.page, {
 		/*
@@ -233,7 +235,46 @@
 			},
 			enumerable: true,
 			configurable: false
-		}
+		},
+		
+		'onDOMReady': {
+			get: function() {
+				return page.events.DOMReady;
+			},
+			set: function(val) {
+				if(typeof val === "function"){
+					handleEvent('DOMReady', val);
+				}
+			},
+			enumerable: true,
+			configurable: false
+		},
+		
+		'onBodyReady': {
+			get: function() {
+				return page.events.BodyReady;
+			},
+			set: function(val) {
+				if(typeof val === "function"){
+					handleEvent('BodyReady', val);
+				}
+			},
+			enumerable: true,
+			configurable: false
+		},
+		
+		'onFooterReady': {
+			get: function() {
+				return page.events.FooterReady;
+			},
+			set: function(val) {
+				if(typeof val === "function"){
+					handleEvent('FooterReady', val);
+				}
+			},
+			enumerable: true,
+			configurable: false
+		},
 	});
 	
 	
@@ -298,8 +339,8 @@
 		}
 	}
 	
-	jMod.onDOMReady = function(){
-		//pageLog('pageHandler::onPageReady');
+	LFPP.page.onBodyReady = function(){
+		//pageLog('pageHandler::onBodyReady');
 		updateLastLocation();
 		setTimeout(watchLocationChange, 100);
 	};

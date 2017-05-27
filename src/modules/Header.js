@@ -122,8 +122,8 @@
 		navObserver.observe(LFPP.el.lmgNav[0], navObConfig);
 	}
 	
-	jMod.onDOMReady = function(){
-		LFPP.log('Header::onPageReady');
+	LFPP.page.onBodyReady = function(){
+		//LFPP.log('Header::onBodyReady');
 		addObservers();
 		
 		/*
