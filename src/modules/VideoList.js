@@ -1,6 +1,10 @@
 (function(){
 	/* Page state and events handler */
 	
+	// https://cms.linustechtips.com/get/videos/by_guid/awVfKxpdBS
+	
+	// window.ipsSettings.csrfKey
+	
 	var videos = LFPP.videos = {
 		events: {},
 		settings: {}
@@ -36,6 +40,94 @@ jMod.CSS = `
 }
 `.toString();
 */
+jMod.CSS = `
+/*
+.ipsDataItem_icon {
+	padding-top: 0;
+	padding-bottom: 0;
+}
+*/
+
+
+.LFPP_Video_Thumb_Wrapper {
+	display:inline-block;
+	width:200px;
+	height:112.5px;
+	vertical-align:middle;
+}
+
+.LFPP_Video_Thumb_Wrapper a {
+	display: inline-block;
+	vertical-align: middle;
+}
+
+.LFPP_Video_Thumb_Container {
+	position: absolute;
+	width: 200px;
+	height: 112.5px;
+	top: 0;
+	bottom: 0;
+	margin: auto 0;
+}
+
+.LFPP_Video_Time {
+	min-width: 20px;
+	height: 14px;
+	background-color: black;
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	border-bottom-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+	z-index: 10000;
+	position: absolute;
+	bottom: 2px;
+	right: 2px;
+	opacity: 0.75;
+	color: white;
+	font-family: arial,sans-serif;
+	font-size: 11px;
+	padding: 0 4px;
+	line-height: 14px;
+}
+
+.LFPP_Video_Thumb_Wrapper:hover .LFPP_Video_Time {
+	opacity: 1;
+}
+
+.LFPP_Video_Thumb {
+	width: 200px;
+	height: 112.5px;
+	overflow: hidden;
+	position: absolute;
+}
+
+.LFPP_Video_Thumb img {
+	max-width: 200px;
+    height: auto;
+    width: 200px;
+    margin: auto 0;
+    top: 0;
+    position: absolute;
+    bottom: 0;
+}
+
+.LFPP_Video_ThumbPreview {
+	position:absolute;
+	top:0;
+	left:0;
+	width:200px;
+	height:112.5px;
+	overflow:hidden;
+}
+
+.LFPP_Video_ThumbPreview img {
+	height:112.5px;
+	width:auto;
+	margin-left:0px;
+}
+
+
+`.toString();
 	//var _vcache = videos._cache = {};
 	
 	videos.cache = (function(){
@@ -258,34 +350,58 @@ jMod.CSS = `
 			if(topicURL){
 				getVideoThumb(topicURL).then(function(posterURL){
 					posterURL = posterURL || '';
+					
 					var spriteURL = posterURL.replace('/thumbnails/', '/sprite/');
+					var vid = /\/by_guid\/(.+)$/i.exec(posterURL);
+					if(vid && vid.length > 1 && vid[1]){
+						vid = vid[1];
+					} else {
+						vid = null;
+					}
 					var $divIcon = $('.ipsDataItem_icon', $thumb);
 					var $divIconLink = $('.ipsDataItem_icon > a', $thumb);
+					var $thumbfaIcon = $('i.fa-circle', $thumb);
+					
+					
+					if(posterURL && $thumbfaIcon && $thumbfaIcon.length){
+						$thumbfaIcon.removeClass('fa-circle').addClass('fa-youtube-play');
+					}
 					
 					$divIcon.css({width: '230px', 'max-width': '230px', 'min-width': '230px'});
 					$divIconLink.css({'display': 'inline-block', 'vertical-align': 'middle'});
 
 					$divIcon.append(''
-						+ '<div class="LFPP_Video_Thumb_Wrapper" style="display:inline-block;width:200px;height:112.5px;vertical-align:middle;">'
-							+ '<a class="" href="' + topicURL + '" style="display: inline-block;vertical-align: middle;">'
-								+ '<div style="position:absolute;width:200px;height:112.5px;">'
-									+ '<div class="LFPP_Video_Thumb" style="width:200px;height:112.5px;overflow:hidden;">'
-										+ '<img src="' + posterURL + '" style="max-width:200px;height:auto;width:200px;">'
+						+ '<div class="LFPP_Video_Thumb_Wrapper">'
+							+ '<a class="" href="' + topicURL + '">'
+								+ '<div class="LFPP_Video_Thumb_Container">'
+									+ '<div class="LFPP_Video_Thumb">'
+										+ '<img src="' + posterURL + '">'
 									+ '</div>'
-									+ '<div class="LFPP_Video_ThumbPreview" style="position:absolute;top:0;left:0;width:200px;height:112.5px;overflow:hidden;">'
-										+ '<img src="" style="height:112.5px;width:auto;margin-left:0px;display:none;" data-frame="0" >'
+									+ '<div class="LFPP_Video_ThumbPreview">'
+										+ '<img src="" data-frame="0" style="display:none;">'
 									+ '</div>'
+									+ '<div class="LFPP_Video_Time" style="display:none;"></div>'
 								+ '</div>'
 							+ '</a>'
 						+ '</div>'
 					);
 					
+					var $LFPP_Video_Time = $('.LFPP_Video_Time', $divIcon);
+					
+					if(vid){
+						LFPP.videoInfo.getVideoDuration(vid).then(function(duration){
+							$LFPP_Video_Time.html(duration.minutes + ':' + (duration.seconds < 10 ? '0' : '') + duration.seconds).css('display', 'block');
+						}, function(e) {
+							console.log(e);
+						});
+					}
 					
 					if(LFPP.videos.settings.show_preview_on_hover){
 						var $LFPP_Video_Thumb_Wrapper = $('.LFPP_Video_Thumb_Wrapper', $divIcon);
 						var $LFPP_Video_Thumb = $('.LFPP_Video_Thumb', $divIcon);
 						var $LFPP_Video_ThumbPreview = $('.LFPP_Video_ThumbPreview', $divIcon);
 						var $LFPP_Video_ThumbPreview_Image = $('.LFPP_Video_ThumbPreview img', $divIcon);
+						
 						var thumbPreviewImg = $LFPP_Video_ThumbPreview_Image[0];
 						var thumbPreviewWidth, maxThumbFrames;
 						
@@ -336,12 +452,20 @@ jMod.CSS = `
 							}
 						}
 						
+						var errored = false;
 						$LFPP_Video_Thumb_Wrapper.hover(function(){
+							if(errored) return;
 							if(!$LFPP_Video_ThumbPreview_Image.attr('src')){
-								thumbPreviewImg.addEventListener('load', function() {
+								thumbPreviewImg.addEventListener('load', function(e) {
+									//console.log('img load', e);
+									if(errored) return;
 									$LFPP_Video_ThumbPreview_Image.css('display', 'block');
 									thumbPreviewWidth = parseInt($LFPP_Video_ThumbPreview_Image.width());
 									maxThumbFrames = Math.round(thumbPreviewWidth / 200);
+								});
+								thumbPreviewImg.addEventListener('error', function(e) {
+									//console.log('img error', e);
+									errored = true;
 								});
 								thumbPreviewImg.setAttribute('src', spriteURL);
 								_animationTimer = setTimeout(startAnimateThumb, delayBetweenFrames);

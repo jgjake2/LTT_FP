@@ -39,7 +39,7 @@ jMod.CSS = `
 			//#DB4105
 			//#C73A03
 		var headStyle = infoDefaultStyle + 'font-weight:900;font-size:1.45em;color:#DB4105;' + fontFamily,
-			titleStyle = infoDefaultStyle + "font-weight:200;font-size:110%;color:green;" + fontFamily,
+			titleStyle = infoDefaultStyle + "font-weight:200;font-size:115%;color:green;" + fontFamily,
 			textStyle = infoDefaultStyle + "font-weight:normal;font-size:100%;color:blue;";
 		function jModLogInfo(title, text) {
 			var i = 2,
@@ -79,6 +79,7 @@ jMod.CSS = `
 			['VideoPlayer', '*'],
 			//['PageHandler', '*'],
 			//['VideoList', '*']
+			['VideoInfo', '*']
 		];
 		
 		
@@ -301,9 +302,9 @@ jMod.CSS = `
 	}
 	
 	function checkDocument(){
-		if(DOMReady && BodyReady && FooterReady) return true;
+		
 		//coreLog('beforescriptexecute', 'beforescriptexecute Fired', e);
-		if(window.document && window.document.body){
+		if(!FooterReady && window.document && window.document.body){
 			if(!DOMReady) onDOMReady();
 			if(!BodyReady && document.getElementById('ipsLayout_body')){
 				onBodyReady();
@@ -313,7 +314,7 @@ jMod.CSS = `
 				return true;
 			}
 		}
-		
+		if(DOMReady && BodyReady && FooterReady) return true;
 	}
 	
 	//jMod.onDOMReady = InitSettings;

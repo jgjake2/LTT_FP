@@ -91,7 +91,7 @@
 				
 				if(cVideoDuration) {
 					//console.log('Use getVideoDuration cache: "' + vid + '" -> ', cVideoDuration);
-					return respond(cVideoDuration);
+					return respond({duration: cVideoDuration, minutes: parseInt(cVideoDuration / 60), seconds: parseInt(cVideoDuration % 60)});
 				} else {
 					_requestCount++;
 					
@@ -123,10 +123,9 @@
 									
 									if(totalTime){
 										cache.setVideoDuration(vid, totalTime);
-										return respond(totalTime);
+										return respond({duration: totalTime, minutes: parseInt(totalTime / 60), seconds: parseInt(totalTime % 60)});
 									}
 									
-									return respond(totalTime, false);
 								}
 								
 								return respond(data, false);
@@ -267,7 +266,7 @@
 	
 
 	LFPP.page.onFooterReady = function(){
-		videoInfoLog('pageHandler::onFooterReady');
+		videoInfoLog('VideoInfo::onFooterReady');
 		
 		
 		if(LFPP.page.isFPClubVideoPage){
@@ -279,14 +278,14 @@
 					
 					//console.log('start getVideoInfo ', vid);
 					videoInfo.getVideoInfo(vid).then(function(info){
-						console.log('getVideoInfo success: ', info);
+						//console.log('getVideoInfo success: ', info);
 					}, function(e){
 						console.log('getVideoInfo fail: ', e);
 					});
 					
 					//console.log('start getVideoDuration ', vid);
 					videoInfo.getVideoDuration(vid).then(function(duration){
-						console.log('getVideoDuration success: ', duration);
+						//console.log('getVideoDuration success: ', duration);
 					}, function(e){
 						console.log('getVideoDuration fail: ', e);
 					});
