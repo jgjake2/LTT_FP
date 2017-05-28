@@ -13,7 +13,7 @@
 // @require          https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js
 // @require          https://code.jmod.info/velocity.min.js
 // @require          https://code.jmod.info/0.0.20/jMod.min.js
-// @version          0.4.0
+// @version          0.4.1
 // @grant            unsafeWindow
 // @grant            GM_info
 // @grant            GM_log
@@ -76,7 +76,7 @@ jMod.CSS = `
 			//#DB4105
 			//#C73A03
 		var headStyle = infoDefaultStyle + 'font-weight:900;font-size:1.45em;color:#DB4105;' + fontFamily,
-			titleStyle = infoDefaultStyle + "font-weight:200;font-size:110%;color:green;" + fontFamily,
+			titleStyle = infoDefaultStyle + "font-weight:200;font-size:115%;color:green;" + fontFamily,
 			textStyle = infoDefaultStyle + "font-weight:normal;font-size:100%;color:blue;";
 		function jModLogInfo(title, text) {
 			var i = 2,
@@ -116,6 +116,7 @@ jMod.CSS = `
 			['VideoPlayer', '*'],
 			//['PageHandler', '*'],
 			//['VideoList', '*']
+			['VideoInfo', '*']
 		];
 		
 		
@@ -759,8 +760,314 @@ jMod.CSS = `
 })();
 
 
+
 (function(){
 	/* Page state and events handler */
+	
+	var videoInfo = LFPP.videoInfo = {
+		events: {}
+	};
+	
+	var _vicache = videoInfo._cache = {};
+	var videoInfoLog = LFPP.getLog('VideoInfo');
+	
+	
+	var cache = videoInfo.cache = (function(){
+	
+		function getCachedJSON(name){
+			var tmp = GM_getValue(name, '{}');
+			var _json;
+			try {
+				_json = JSON.parse(tmp);
+			} catch(e) {
+				_json = {};
+			}
+			return _json;
+		}
+		
+		function setCache(name, obj){
+			var str = JSON.stringify(obj || {});
+			GM_setValue(name, str);
+			return obj;
+		}
+		
+		function getCachedValue(objName, valName, def){
+			var obj = getCachedJSON(objName);
+			return (obj[valName] || def);
+		}
+		
+		function setCachedValue(objName, valName, val){
+			var obj = getCachedJSON(objName) || {};
+			obj[valName] = val;
+			setCache(objName, obj);
+			return val;
+		}
+		
+		var videoInfoCache = {
+			getVideoInfo: function(vid){
+				if(vid) return getCachedValue('VideoInfo', vid);
+			},
+			setVideoInfo: function(vid, obj){
+				if(vid && obj) return setCachedValue('VideoInfo', vid, obj);
+			},
+			
+			
+			getVideoDuration: function(vid){
+				if(vid) return getCachedValue('VideoDuration', vid);
+			},
+			setVideoDuration: function(vid, val){
+				if(vid && val) return setCachedValue('VideoDuration', vid, val);
+			},
+		};
+		
+		return videoInfoCache;
+	
+	})();
+	
+	
+	var _requestCount = 0;
+	//var _getVideoPageIFrameURL = {};
+	//var __getVideoPageIFrameURL = {};
+	_vicache._getVideoDuration = {};
+	videoInfo.getVideoDuration = function(vid, skipCache){
+		if(_vicache._getVideoDuration[vid]){
+			return _vicache._getVideoDuration[vid];
+		}
+		
+		
+		_vicache._getVideoDuration[vid] = new Promise(function(resolve, reject){
+			var responded = false,
+				respond = function(a, b){
+					if(!responded){
+						_vicache._getVideoDuration[vid] = null;
+						if(b === false){
+							return reject(a);
+						}
+						return resolve(a);
+					}
+				};
+			
+			setAsap(function(){
+				
+				var cVideoDuration = skipCache ? null : cache.getVideoDuration(vid);
+				
+				if(cVideoDuration) {
+					//console.log('Use getVideoDuration cache: "' + vid + '" -> ', cVideoDuration);
+					return respond({duration: cVideoDuration, minutes: parseInt(cVideoDuration / 60), seconds: parseInt(cVideoDuration % 60)});
+				} else {
+					_requestCount++;
+					
+					function _doRequest3(url){
+						$.get({url: url, dataType: 'text'})
+							.done(function(data, textStatus, jqXHR) {
+								_requestCount--;
+								//console.log('_doRequest3: ', url, ' -- textStatus: ', textStatus, ' -- data: ', data);
+								//https://Edge02-na.floatplaneclub.com:443/Videos/vidId/1080.mp4?wmsAuthSign=c2VydmVyX3RpbWU9NS8yOC8yMDE3IDEyOjMxOjMzIFBNJmhhc2hfdmFsdWU9NEIxUGQ1Smk5TG9HQVJxRzZHT01GUT09JnZhbGlkbWludXRlcz0yNDAmaWQ9NDg5MTU5&attachment=true
+								
+								if(data){
+									var patt = /\#EXTINF\:(\d+\.\d+)\,/gmi;
+									var match,
+										totalTime = 0.0,
+										tmp = 0.0;
+									while(match = patt.exec(data)){
+										if(match && match.length > 1){
+											try {
+												tmp = parseFloat(match[1]);
+												totalTime += tmp;
+											} catch(e) {
+												console.log(e);
+											}
+											tmp = 0.0;
+										} else {
+											break;
+										}
+									}
+									
+									if(totalTime){
+										cache.setVideoDuration(vid, totalTime);
+										return respond({duration: totalTime, minutes: parseInt(totalTime / 60), seconds: parseInt(totalTime % 60)});
+									}
+									
+								}
+								
+								return respond(data, false);
+							})
+							.fail(function(e, textStatus) {
+								_requestCount--;
+								//console.log('Error getting page: ', url, e, textStatus);
+								return respond(e, false);
+							});
+					}
+					
+					function _doRequest2(url){
+						$.get({url: url, dataType: 'text'})
+							.done(function(data, textStatus, jqXHR) {
+								
+								//console.log('_doRequest2: ', url, ' -- textStatus: ', textStatus, ' -- data: ', data);
+								//https://Edge02-na.floatplaneclub.com:443/Videos/vidId/1080.mp4?wmsAuthSign=c2VydmVyX3RpbWU9NS8yOC8yMDE3IDEyOjMxOjMzIFBNJmhhc2hfdmFsdWU9NEIxUGQ1Smk5TG9HQVJxRzZHT01GUT09JnZhbGlkbWludXRlcz0yNDAmaWQ9NDg5MTU5&attachment=true
+								
+								if(data){
+									var match = /(chunk\.m3u8\?nimblesessionid=\d+\&wmsAuthSign=[^\r\n\s]+)/im.exec(data);
+									if(match && match.length > 1){
+										var newURL = url.replace(/playlist.m3u8.+$/i, match[1]);
+										
+										return _doRequest3(newURL);
+									}
+								}
+								_requestCount--;
+								return respond(data, false);
+							})
+							.fail(function(e, textStatus) {
+								_requestCount--;
+								//console.log('Error getting page: ', url, e, textStatus);
+								return respond(e, false);
+							});
+					}
+					
+					function _doRequest(){
+						var url = 'https://linustechtips.com/main/applications/floatplane/interface/video_url.php?video_guid=' + vid + '&video_quality=1080';
+						$.get({url: url, dataType: 'text'})
+							.done(function(data, textStatus, jqXHR) {
+								//console.log('_doRequest: ', url, ' -- textStatus: ', textStatus, ' -- data: ', data);
+								//https://Edge02-na.floatplaneclub.com:443/Videos/vidId/1080.mp4?wmsAuthSign=c2VydmVyX3RpbWU9NS8yOC8yMDE3IDEyOjMxOjMzIFBNJmhhc2hfdmFsdWU9NEIxUGQ1Smk5TG9HQVJxRzZHT01GUT09JnZhbGlkbWludXRlcz0yNDAmaWQ9NDg5MTU5&attachment=true
+								if(data && /Edge\d+\-\w+\.floatplaneclub\.com/i.test(data)){
+									return _doRequest2(data);
+								}
+								_requestCount--;
+								return respond(data, false);
+							})
+							.fail(function(e, textStatus) {
+								_requestCount--;
+								//console.log('Error getting page: ', url, e, textStatus);
+								return respond(e, false);
+							});
+					}
+					
+					if(_requestCount > 1){
+						setTimeout(_doRequest, 150 * _requestCount); // Prevents LTT "Too Many Requests" Error
+					} else {
+						_doRequest();
+					}
+					
+				}
+			});
+			
+		});
+		
+		return _vicache._getVideoDuration[vid];
+	};
+	
+	
+	
+	_vicache._getVideoInfo = {};
+	videoInfo.getVideoInfo = function(vid, skipCache){
+		if(_vicache._getVideoInfo[vid]){
+			return _vicache._getVideoInfo[vid];
+		}
+		
+		
+		_vicache._getVideoInfo[vid] = new Promise(function(resolve, reject){
+			var responded = false,
+				respond = function(a, b){
+					if(!responded){
+						_vicache._getVideoInfo[vid] = null;
+						if(b === false){
+							return reject(a);
+						}
+						return resolve(a);
+					}
+				};
+			
+			setAsap(function(){
+				
+				var cVideoInfo = skipCache ? null : cache.getVideoInfo(vid);
+				
+				if(cVideoInfo) {
+					//console.log('Use getVideoInfo cache: "' + vid + '" -> ', cVideoInfo);
+					return respond(cVideoInfo);
+				} else {
+					_requestCount++;
+					
+					
+					function _doRequest(){
+						var url = 'https://cms.linustechtips.com/get/videos/by_guid/' + vid;
+						$.get({url: url, dataType: 'json'})
+							.done(function(data, textStatus, jqXHR) {
+								_requestCount--;
+								console.log('_doRequest: ', url, ' -- textStatus: ', textStatus, ' -- data: ', data);
+								//https://Edge02-na.floatplaneclub.com:443/Videos/vidId/1080.mp4?wmsAuthSign=c2VydmVyX3RpbWU9NS8yOC8yMDE3IDEyOjMxOjMzIFBNJmhhc2hfdmFsdWU9NEIxUGQ1Smk5TG9HQVJxRzZHT01GUT09JnZhbGlkbWludXRlcz0yNDAmaWQ9NDg5MTU5&attachment=true
+								if(data && data.description){
+									cache.setVideoInfo(vid, data);
+									return respond(data);
+									//return respond('');
+								}
+								
+								return respond(data, false);
+							})
+							.fail(function(e, textStatus) {
+								_requestCount--;
+								//console.log('Error getting page: ', url, e, textStatus);
+								return respond(e, false);
+							});
+					}
+					
+					if(_requestCount > 1){
+						setTimeout(_doRequest, 150 * _requestCount); // Prevents LTT "Too Many Requests" Error
+					} else {
+						_doRequest();
+					}
+				}
+				
+				
+			});
+					
+		});
+		
+		return _vicache._getVideoInfo[vid];
+	};
+	
+
+	LFPP.page.onFooterReady = function(){
+		videoInfoLog('VideoInfo::onFooterReady');
+		
+		
+		if(LFPP.page.isFPClubVideoPage){
+			if(LFPP.el.videoContainerIframe && LFPP.el.videoContainerIframe.length){
+				var iframeSrc = LFPP.el.videoContainerIframe.attr('src');
+				var match = /get\/player\/(.+)$/i.exec(iframeSrc || '');
+				if(match && match.length > 1){
+					var vid = match[1];
+					
+					//console.log('start getVideoInfo ', vid);
+					videoInfo.getVideoInfo(vid).then(function(info){
+						//console.log('getVideoInfo success: ', info);
+					}, function(e){
+						console.log('getVideoInfo fail: ', e);
+					});
+					
+					//console.log('start getVideoDuration ', vid);
+					videoInfo.getVideoDuration(vid).then(function(duration){
+						//console.log('getVideoDuration success: ', duration);
+					}, function(e){
+						console.log('getVideoDuration fail: ', e);
+					});
+					
+					
+				}
+			} else {
+				console.log('no iframe');
+			}
+		}
+		
+	};
+	
+})();
+(function(){
+	/* Page state and events handler */
+	
+	// https://cms.linustechtips.com/get/videos/by_guid/awVfKxpdBS
+	
+	// window.ipsSettings.csrfKey
 	
 	var videos = LFPP.videos = {
 		events: {},
@@ -797,6 +1104,94 @@ jMod.CSS = `
 }
 `.toString();
 */
+jMod.CSS = `
+/*
+.ipsDataItem_icon {
+	padding-top: 0;
+	padding-bottom: 0;
+}
+*/
+
+
+.LFPP_Video_Thumb_Wrapper {
+	display:inline-block;
+	width:200px;
+	height:112.5px;
+	vertical-align:middle;
+}
+
+.LFPP_Video_Thumb_Wrapper a {
+	display: inline-block;
+	vertical-align: middle;
+}
+
+.LFPP_Video_Thumb_Container {
+	position: absolute;
+	width: 200px;
+	height: 112.5px;
+	top: 0;
+	bottom: 0;
+	margin: auto 0;
+}
+
+.LFPP_Video_Time {
+	min-width: 20px;
+	height: 14px;
+	background-color: black;
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	border-bottom-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+	z-index: 10000;
+	position: absolute;
+	bottom: 2px;
+	right: 2px;
+	opacity: 0.75;
+	color: white;
+	font-family: arial,sans-serif;
+	font-size: 11px;
+	padding: 0 4px;
+	line-height: 14px;
+}
+
+.LFPP_Video_Thumb_Wrapper:hover .LFPP_Video_Time {
+	opacity: 1;
+}
+
+.LFPP_Video_Thumb {
+	width: 200px;
+	height: 112.5px;
+	overflow: hidden;
+	position: absolute;
+}
+
+.LFPP_Video_Thumb img {
+	max-width: 200px;
+    height: auto;
+    width: 200px;
+    margin: auto 0;
+    top: 0;
+    position: absolute;
+    bottom: 0;
+}
+
+.LFPP_Video_ThumbPreview {
+	position:absolute;
+	top:0;
+	left:0;
+	width:200px;
+	height:112.5px;
+	overflow:hidden;
+}
+
+.LFPP_Video_ThumbPreview img {
+	height:112.5px;
+	width:auto;
+	margin-left:0px;
+}
+
+
+`.toString();
 	//var _vcache = videos._cache = {};
 	
 	videos.cache = (function(){
@@ -1019,34 +1414,58 @@ jMod.CSS = `
 			if(topicURL){
 				getVideoThumb(topicURL).then(function(posterURL){
 					posterURL = posterURL || '';
+					
 					var spriteURL = posterURL.replace('/thumbnails/', '/sprite/');
+					var vid = /\/by_guid\/(.+)$/i.exec(posterURL);
+					if(vid && vid.length > 1 && vid[1]){
+						vid = vid[1];
+					} else {
+						vid = null;
+					}
 					var $divIcon = $('.ipsDataItem_icon', $thumb);
 					var $divIconLink = $('.ipsDataItem_icon > a', $thumb);
+					var $thumbfaIcon = $('i.fa-circle', $thumb);
+					
+					
+					if(posterURL && $thumbfaIcon && $thumbfaIcon.length){
+						$thumbfaIcon.removeClass('fa-circle').addClass('fa-youtube-play');
+					}
 					
 					$divIcon.css({width: '230px', 'max-width': '230px', 'min-width': '230px'});
 					$divIconLink.css({'display': 'inline-block', 'vertical-align': 'middle'});
 
 					$divIcon.append(''
-						+ '<div class="LFPP_Video_Thumb_Wrapper" style="display:inline-block;width:200px;height:112.5px;vertical-align:middle;">'
-							+ '<a class="" href="' + topicURL + '" style="display: inline-block;vertical-align: middle;">'
-								+ '<div style="position:absolute;width:200px;height:112.5px;">'
-									+ '<div class="LFPP_Video_Thumb" style="width:200px;height:112.5px;overflow:hidden;">'
-										+ '<img src="' + posterURL + '" style="max-width:200px;height:auto;width:200px;">'
+						+ '<div class="LFPP_Video_Thumb_Wrapper">'
+							+ '<a class="" href="' + topicURL + '">'
+								+ '<div class="LFPP_Video_Thumb_Container">'
+									+ '<div class="LFPP_Video_Thumb">'
+										+ '<img src="' + posterURL + '">'
 									+ '</div>'
-									+ '<div class="LFPP_Video_ThumbPreview" style="position:absolute;top:0;left:0;width:200px;height:112.5px;overflow:hidden;">'
-										+ '<img src="" style="height:112.5px;width:auto;margin-left:0px;display:none;" data-frame="0" >'
+									+ '<div class="LFPP_Video_ThumbPreview">'
+										+ '<img src="" data-frame="0" style="display:none;">'
 									+ '</div>'
+									+ '<div class="LFPP_Video_Time" style="display:none;"></div>'
 								+ '</div>'
 							+ '</a>'
 						+ '</div>'
 					);
 					
+					var $LFPP_Video_Time = $('.LFPP_Video_Time', $divIcon);
+					
+					if(vid){
+						LFPP.videoInfo.getVideoDuration(vid).then(function(duration){
+							$LFPP_Video_Time.html(duration.minutes + ':' + (duration.seconds < 10 ? '0' : '') + duration.seconds).css('display', 'block');
+						}, function(e) {
+							console.log(e);
+						});
+					}
 					
 					if(LFPP.videos.settings.show_preview_on_hover){
 						var $LFPP_Video_Thumb_Wrapper = $('.LFPP_Video_Thumb_Wrapper', $divIcon);
 						var $LFPP_Video_Thumb = $('.LFPP_Video_Thumb', $divIcon);
 						var $LFPP_Video_ThumbPreview = $('.LFPP_Video_ThumbPreview', $divIcon);
 						var $LFPP_Video_ThumbPreview_Image = $('.LFPP_Video_ThumbPreview img', $divIcon);
+						
 						var thumbPreviewImg = $LFPP_Video_ThumbPreview_Image[0];
 						var thumbPreviewWidth, maxThumbFrames;
 						
@@ -1097,12 +1516,20 @@ jMod.CSS = `
 							}
 						}
 						
+						var errored = false;
 						$LFPP_Video_Thumb_Wrapper.hover(function(){
+							if(errored) return;
 							if(!$LFPP_Video_ThumbPreview_Image.attr('src')){
-								thumbPreviewImg.addEventListener('load', function() {
+								thumbPreviewImg.addEventListener('load', function(e) {
+									//console.log('img load', e);
+									if(errored) return;
 									$LFPP_Video_ThumbPreview_Image.css('display', 'block');
 									thumbPreviewWidth = parseInt($LFPP_Video_ThumbPreview_Image.width());
 									maxThumbFrames = Math.round(thumbPreviewWidth / 200);
+								});
+								thumbPreviewImg.addEventListener('error', function(e) {
+									//console.log('img error', e);
+									errored = true;
 								});
 								thumbPreviewImg.setAttribute('src', spriteURL);
 								_animationTimer = setTimeout(startAnimateThumb, delayBetweenFrames);
@@ -1880,9 +2307,9 @@ jMod.CSS = `
 	}
 	
 	function checkDocument(){
-		if(DOMReady && BodyReady && FooterReady) return true;
+		
 		//coreLog('beforescriptexecute', 'beforescriptexecute Fired', e);
-		if(window.document && window.document.body){
+		if(!FooterReady && window.document && window.document.body){
 			if(!DOMReady) onDOMReady();
 			if(!BodyReady && document.getElementById('ipsLayout_body')){
 				onBodyReady();
@@ -1892,7 +2319,7 @@ jMod.CSS = `
 				return true;
 			}
 		}
-		
+		if(DOMReady && BodyReady && FooterReady) return true;
 	}
 	
 	//jMod.onDOMReady = InitSettings;
