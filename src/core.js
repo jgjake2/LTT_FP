@@ -1,6 +1,6 @@
 
 (function($){
-const _debug = true;
+const _debug = false;
 var uw = (typeof unsafeWindow !== "undefined" ? unsafeWindow : this),
 	global = this;
 

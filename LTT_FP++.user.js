@@ -13,7 +13,7 @@
 // @require          https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js
 // @require          https://code.jmod.info/velocity.min.js
 // @require          https://code.jmod.info/0.0.20/jMod.min.js
-// @version          0.4.1
+// @version          0.4.2
 // @grant            unsafeWindow
 // @grant            GM_info
 // @grant            GM_log
@@ -34,7 +34,7 @@
 // ==/UserScript==
 
 (function($){
-const _debug = true;
+const _debug = false;
 var uw = (typeof unsafeWindow !== "undefined" ? unsafeWindow : this),
 	global = this;
 
@@ -1142,7 +1142,6 @@ jMod.CSS = `
 	border-top-right-radius: 2px;
 	border-bottom-left-radius: 2px;
 	border-bottom-right-radius: 2px;
-	z-index: 10000;
 	position: absolute;
 	bottom: 2px;
 	right: 2px;
@@ -1190,6 +1189,52 @@ jMod.CSS = `
 	margin-left:0px;
 }
 
+.LFPP_Video_Timeline {
+	width:100%;
+	position:absolute;
+	bottom:-10px;
+	height:20px;
+}
+
+.LFPP_Video_Timeline_Bar {
+	width:100%;
+	background-color:rgba(128,128,128,0.8);
+	height:3px;
+	position:absolute;
+	bottom:10px;
+}
+
+.LFPP_Video_Timeline_Progress {
+	width:0px;
+	height:3px;
+	background-color:red;
+	position:absolute;
+	left:0;
+	bottom:10px;
+}
+
+
+.LFPP_Video_Timeline_Progress::after{
+	content: " ";
+	height:8px;
+	width:8px;
+	background-color:red;
+	position:absolute;
+	right:-2px;
+	top:-3px;
+	border-top-right-radius: 4px;
+	border-top-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-bottom-left-radius: 4px;
+}
+
+.LFPP_Video_Timeline:not(:hover) .LFPP_Video_Timeline_Progress::after {
+	display:none;
+}
+
+.LFPP_Video_Timeline:hover .LFPP_Video_Timeline_Progress::after {
+	display:block !important;
+}
 
 `.toString();
 	//var _vcache = videos._cache = {};
@@ -1445,6 +1490,10 @@ jMod.CSS = `
 										+ '<img src="" data-frame="0" style="display:none;">'
 									+ '</div>'
 									+ '<div class="LFPP_Video_Time" style="display:none;"></div>'
+									+ '<div class="LFPP_Video_Timeline" style="display:none;">'
+										+ '<div class="LFPP_Video_Timeline_Bar" style=""></div>'
+										+ '<div class="LFPP_Video_Timeline_Progress" style=""></div>'
+									+ '</div>'
 								+ '</div>'
 							+ '</a>'
 						+ '</div>'
@@ -1462,9 +1511,12 @@ jMod.CSS = `
 					
 					if(LFPP.videos.settings.show_preview_on_hover){
 						var $LFPP_Video_Thumb_Wrapper = $('.LFPP_Video_Thumb_Wrapper', $divIcon);
-						var $LFPP_Video_Thumb = $('.LFPP_Video_Thumb', $divIcon);
-						var $LFPP_Video_ThumbPreview = $('.LFPP_Video_ThumbPreview', $divIcon);
+						//var $LFPP_Video_Thumb = $('.LFPP_Video_Thumb', $divIcon);
+						//var $LFPP_Video_ThumbPreview = $('.LFPP_Video_ThumbPreview', $divIcon);
 						var $LFPP_Video_ThumbPreview_Image = $('.LFPP_Video_ThumbPreview img', $divIcon);
+						
+						var $LFPP_Video_Timeline = $('.LFPP_Video_Timeline', $divIcon);
+						var $LFPP_Video_Timeline_Progress = $('.LFPP_Video_Timeline_Progress', $divIcon);
 						
 						var thumbPreviewImg = $LFPP_Video_ThumbPreview_Image[0];
 						var thumbPreviewWidth, maxThumbFrames;
@@ -1473,9 +1525,14 @@ jMod.CSS = `
 						var delayBetweenFrames = parseInt(LFPP.videos.settings.thumb_animation_speed || 300);
 						var _stopped = true;
 						var _animationTimer = null;
+						
+						function updateProgress(currentFrame, _maxThumbFrames){
+							var pct = Math.min((parseFloat(currentFrame) / parseFloat(_maxThumbFrames || maxThumbFrames || currentFrame)) * 100, 100);
+							$LFPP_Video_Timeline_Progress.css('width', pct + '%');
+						}
 						function animateThumb(){
 							_animationTimer = null;
-							if(_stopped) return;
+							
 							
 							var currentFrame = parseInt(thumbPreviewImg.dataset.frame || 0) + 1;
 							if(currentFrame > maxThumbFrames){
@@ -1484,7 +1541,8 @@ jMod.CSS = `
 							
 							thumbPreviewImg.dataset.frame = currentFrame;
 							$LFPP_Video_ThumbPreview_Image.css('margin-left', (currentFrame * -200) + 'px');
-							
+							updateProgress(currentFrame, maxThumbFrames);
+							if(_stopped) return;
 							_animationTimer = setTimeout(animateThumb, delayBetweenFrames);
 						}
 						function stopAnimateThumb(){
@@ -1497,6 +1555,16 @@ jMod.CSS = `
 							}
 							if(!LFPP.videos.settings.keep_preview_after_hover){
 								$LFPP_Video_ThumbPreview_Image.css('display', 'none');
+								$LFPP_Video_Timeline.css('display', 'none');
+							}
+						}
+						function pauseAnimateThumb(){
+							_stopped = true;
+							if(_animationTimer){
+								try {
+									clearTimeout(_animationTimer);
+								} catch(e) {}
+								_animationTimer = null;
 							}
 						}
 						function startAnimateThumb(){
@@ -1524,6 +1592,7 @@ jMod.CSS = `
 									//console.log('img load', e);
 									if(errored) return;
 									$LFPP_Video_ThumbPreview_Image.css('display', 'block');
+									$LFPP_Video_Timeline.css('display', 'block');
 									thumbPreviewWidth = parseInt($LFPP_Video_ThumbPreview_Image.width());
 									maxThumbFrames = Math.round(thumbPreviewWidth / 200);
 								});
@@ -1535,10 +1604,35 @@ jMod.CSS = `
 								_animationTimer = setTimeout(startAnimateThumb, delayBetweenFrames);
 							} else {
 								$LFPP_Video_ThumbPreview_Image.css('display', 'block');
+								$LFPP_Video_Timeline.css('display', 'block');
 								startAnimateThumb();
 							}
 						}, function(){
 							stopAnimateThumb();
+						});
+						
+						$LFPP_Video_Timeline.mousemove(function(e){
+							pauseAnimateThumb();
+							var x = e.offsetX;
+							var width = $LFPP_Video_Timeline.width();
+							var frameNum = Math.max(parseInt((x / width) * (maxThumbFrames || 0)), 0);
+							thumbPreviewImg.dataset.frame = frameNum;
+							animateThumb();
+						});
+						
+						$LFPP_Video_Timeline.hover(function(e){
+							pauseAnimateThumb();
+							var x = e.offsetX;
+							var width = $LFPP_Video_Timeline.width();
+							var frameNum = Math.max(parseInt((x / width) * (maxThumbFrames || 0)), 0);
+							thumbPreviewImg.dataset.frame = frameNum;
+							animateThumb();
+						}, function(e){
+							if(e.relatedTarget.tagName === 'IMG'){
+								startAnimateThumb();
+							} else {
+								stopAnimateThumb();
+							}
 						});
 					
 					}
