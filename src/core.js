@@ -1,6 +1,6 @@
 
 (function($){
-const _debug = false;
+const _debug = true;
 var uw = (typeof unsafeWindow !== "undefined" ? unsafeWindow : this),
 	global = this;
 
@@ -11,6 +11,10 @@ Promise._immediateFn = setAsap;
 function isArray(obj){return (obj.constructor === (new Array).constructor ? true : false);}
 
 jMod.CSS = `
+body:not(.ipsLayout_minimal) #lmgNav {
+    position: absolute !important;
+    top: 75px !important;
+}
 #lmgNav {z-index: 1001;}
 .jmod-na {z-index: 16400;}
 .jmod-na .modal-backdrop {z-index: 16400;}
@@ -251,11 +255,18 @@ jMod.CSS = `
 	// Start DOM interactions
 	function onDOMReadyCB(){
 		coreLog('onDOMReadyCB', 'onDOMReady Fired');
+		
+		if(window.document && window.document.head) jMod.AddCSS();
+		
 		init();
 	}
 	
+	// Start document changes
 	function onBodyReadyCB(){
 		coreLog('onBodyReadyCB', 'onBodyReady Fired');
+		
+		jMod.AddCSS();
+		
 		addSettingsButton();
 	}
 	
@@ -271,6 +282,7 @@ jMod.CSS = `
 	function onDOMReady(){
 		if(DOMReady) return;
 		DOMReady = true;
+		if(window.document && window.document.head) jMod.AddCSS();
 		onDOMReadyCB();
 		LFPP.page.onDOMReady.fire();
 		if(window.document && document.getElementById('ipsLayout_body')){
@@ -324,6 +336,7 @@ jMod.CSS = `
 		return checkDocument();
 	};
 	
+	// Chrome can't use beforescriptexecute. Use timer instead
 	if(isChrome){
 		/*
 		document.addEventListener('readystatechange', function(e){
@@ -381,5 +394,18 @@ jMod.CSS = `
 	[["src/InitSettings.js"]]
 	
 	checkDocument();
+	
+	// Mark all rows read:
+	//window.$(document).trigger('markAllRead');
+	
+	//$(document).on('contentChange', function (e, newContent) {
+	
+	
+	// get page's hovercard cache
+	//window.ips.ui.hovercard.getCache('https://linustechtips.com/main/topic/807828-motion-controlled-drone-i-dunno-dji-spark/?preview=1')
+	
+	
+	//get preview page
+	//window.ips.getAjax()('https://linustechtips.com/main/topic/803745-ltt-the-best-affordable-gaming-laptop-predator-helios-300/?preview=1').done(function (response) {console.log(response);}).fail(function (jqXHR, status, errorThrown) {console.log(jqXHR, status, errorThrown);});
 	
 })($.noConflict());

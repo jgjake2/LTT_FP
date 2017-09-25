@@ -96,8 +96,10 @@ function filePrioritySort(a, b){
 	return 0;
 }
 
-function replaceFileRef(replaceStr, fileName){
-	var file = '';
+function replaceFileRef(replaceStr, fileName, targetStr){
+	var file = '',
+		subFileRefPatt = /(\[\[[\'\"]([^\'\"]+)[\'\"]\]\][\r\n]*)/gmi,
+		subMatch;
 	if(/\/\*$/.test(fileName)){
 		var _files = fs.readdirSync(fileName.slice(0, -1), 'utf8');
 		
@@ -111,16 +113,24 @@ function replaceFileRef(replaceStr, fileName){
 	}
 	if(!file){
 		console.log('error getting file', fileName);
-		
 	}
 	
-	processedFile = processedFile.replace(replaceStr, file.replace(/\$/gm, '$$$$'));
+	var newFile = file.replace(/\$/gm, '$$$$');
 	
+	while(subMatch = subFileRefPatt.exec(file)){
+		if(subMatch && subMatch.length > 2){
+			newFile = replaceFileRef(subMatch[1], subMatch[2], newFile);
+		} else {
+			break;
+		}
+	}
+	
+	return targetStr.replace(replaceStr, newFile);
 }
 
 while(match = fileRefPatt.exec(origFile)){
 	if(match && match.length > 2){
-		replaceFileRef(match[1], match[2]);
+		processedFile = replaceFileRef(match[1], match[2], processedFile);
 	} else {
 		break;
 	}

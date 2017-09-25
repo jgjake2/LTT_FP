@@ -286,10 +286,24 @@ jMod.CSS = `
 					//console.log('Use iFrame cache: "' + url + '" -> "' + cIFrameSrc + '"');
 					return respond(cIFrameSrc);
 				} else {
+					var _ips = (typeof ips !== "undefined" ? ips : (window.ips || uw.ips));
+					console.log('_ips: ', _ips);
+					if(_ips && _ips.ui && _ips.ui.hovercard){
+						var hovercardCache = _ips.ui.hovercard.getCache(url + '?preview=1');
+						if(hovercardCache){
+							var $hovercardCacheIFrame = $('.video-container > iframe', $(hovercardCache));
+							if($hovercardCacheIFrame && $hovercardCacheIFrame.length && $hovercardCacheIFrame.attr('src')){
+								videos.cache.setPageIFrameSrc(url, $hovercardCacheIFrame.attr('src'));
+								console.log('Used ips cache');
+								return respond($hovercardCacheIFrame.attr('src'));
+							}
+						}
+					}
+				
 					_requestCount++;
 					
-					function _doRequest(){
-						
+					function _doJQueryRequest(){
+						console.log('Use jquery request');
 						$.get({url: url, dataType: 'html'})
 							.done(function(data, textStatus, jqXHR) {
 								_requestCount--;
@@ -316,10 +330,35 @@ jMod.CSS = `
 							});
 					}
 					
+					function _doIPSRequest(){
+						console.log('Use ips request');
+						_ips.getAjax()(url + '?preview=1').done(function (response) {
+							console.log('used ips ajax', response);
+							var $iframe = $('.video-container > iframe', $(response));
+							if($iframe && $iframe.length){// && $iframe.attr('src')){
+								var _src = $iframe.attr('src');
+								if(_src){
+									videos.cache.setPageIFrameSrc(url, _src);
+									return respond(_src);
+								}
+							}
+							console.log('error getting ips iframe: ', url);
+							return respond('');
+						}).fail(function (jqXHR, status, errorThrown) {
+							console.log('Error ips ajax', jqXHR, status, errorThrown);
+							return respond(errorThrown, false);
+						});
+					}
+					
+					
 					if(_requestCount > 1){
-						setTimeout(_doRequest, 250 * _requestCount); // Prevents LTT "Too Many Requests" Error
+						setTimeout((_ips && _ips.getAjax ? _doIPSRequest : _doJQueryRequest), 250 * _requestCount); // Prevents LTT "Too Many Requests" Error
 					} else {
-						_doRequest();
+						if(_ips && _ips.getAjax){
+							_doIPSRequest();
+						} else {
+							_doJQueryRequest();
+						}
 					}
 					
 				}
@@ -392,6 +431,8 @@ jMod.CSS = `
 		var $topicTitleLink = $('.cTopicTitle > a', $thumb);
 		if($topicTitleLink && $topicTitleLink.length){
 			var topicURL = $topicTitleLink.attr('href') || $topicTitleLink[0].href;
+			//var topicHoverTargetURL = $topicTitleLink.attr('data-ipshover-target') || topicURL;
+			
 			if(topicURL){
 				getVideoThumb(topicURL).then(function(posterURL){
 					posterURL = posterURL || '';
@@ -403,8 +444,10 @@ jMod.CSS = `
 					} else {
 						vid = null;
 					}
-					var $divIcon = $('.ipsDataItem_icon', $thumb);
-					var $divIconLink = $('.ipsDataItem_icon > a', $thumb);
+					var $divIcon = $('.ipsDataItem_icon', $thumb)
+						.css({width: '230px', 'max-width': '230px', 'min-width': '230px'});
+					var $divIconLink = $('.ipsDataItem_icon > a', $thumb)
+						.css({'display': 'inline-block', 'vertical-align': 'middle'});
 					var $thumbfaIcon = $('i.fa-circle', $thumb);
 					
 					
@@ -412,15 +455,15 @@ jMod.CSS = `
 						$thumbfaIcon.removeClass('fa-circle').addClass('fa-youtube-play');
 					}
 					
-					$divIcon.css({width: '230px', 'max-width': '230px', 'min-width': '230px'});
-					$divIconLink.css({'display': 'inline-block', 'vertical-align': 'middle'});
+					//$divIcon.css({width: '230px', 'max-width': '230px', 'min-width': '230px'});
+					//$divIconLink.css({'display': 'inline-block', 'vertical-align': 'middle'});
 
 					$divIcon.append(''
 						+ '<div class="LFPP_Video_Thumb_Wrapper">'
 							+ '<a class="" href="' + topicURL + '">'
 								+ '<div class="LFPP_Video_Thumb_Container">'
 									+ '<div class="LFPP_Video_Thumb">'
-										+ '<img src="' + posterURL + '">'
+										+ '<img style="max-width:200px;width:200px;height:auto;" src="' + posterURL + '">'
 									+ '</div>'
 									+ '<div class="LFPP_Video_ThumbPreview">'
 										+ '<img src="" data-frame="0" style="display:none;">'
@@ -610,7 +653,7 @@ jMod.CSS = `
 				//console.log('LFPP.page.onHashChange fired: ', e, urlChanged, hashChanged);
 			//};
 			
-			LFPP.page.onPageIndexChange = function(e){
+			LFPP.page.onPageIndexChange = function(e, urlChanged, hashChanged){
 				videoListLog('onBodyReady', 'onPageIndexChange fired: ', e);
 				if(urlChanged && videos.isVideoListPage){
 					setTimeout(processPageVideoThumbs, 100);

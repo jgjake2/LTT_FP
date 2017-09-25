@@ -6,6 +6,8 @@
  * Add CSS to jMod's CSS pool, which is added as soon as the DOM exists (or immediately if the DOM already exists)
  */
 jMod.CSS = `
+
+
 #ipsLayout_body {
 	margin-top:0px;
 }
@@ -612,8 +614,9 @@ jMod.CSS = `
 			_minPlayerSize = parseInt(_viewportHeight / 4);
 			prevScrollEventVals.pageY = window.pageYOffset;
 
-			jMod.CSS = `			
+			//jMod.CSS = `			
 /* Cover up white background when header hides */
+/* DISABLED
 #ipsLayout_header::before {
     display: block;
     height: 250px;
@@ -625,7 +628,8 @@ jMod.CSS = `
     content: "";
     z-index: 1000;
 }
-`.toString();
+*/
+//`.toString();
 			
 			//var videoSizeSettings = getJModSetting('Video_Size', LFPP.getSettingDefault('Video_Size')).split(',');
 			//console.log('Settings "Video_Size": ', getJModSetting('Video_Size', ''));
@@ -638,8 +642,12 @@ jMod.CSS = `
 					}
 					//jMod.API.addStyle(videoPageCSS);
 					addVideoPlayerWrapper();
+					setTimeout(function(){
+						player.onScroll();
+					}, 500);
 				}
 			}
+			
 		} else {
 			videoPlayerLog('onFooterReady', 'Is Not Video Page');
 		}
